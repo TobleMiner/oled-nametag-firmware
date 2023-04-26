@@ -11,7 +11,10 @@
 #include "esp_log.h"
 #include "esp_system.h"
 #include "esp_timer.h"
+
+#include "flash.h"
 #include "pixelflut/pixelflut.h"
+#include "webserver.h"
 
 #define GPIO_SPI_MOSI	11
 #define GPIO_SPI_CLK	12
@@ -161,8 +164,14 @@ void app_main(void)
 	// Initialize LCD
 	oled_init(spidev);
 
+	// Mount main fat storage
+	ESP_ERROR_CHECK(flash_fatfs_mount("storage", "/storage"));
+
 	// Setup WiFi
 	wifi_main();
+
+	// Setup webserver
+	webserver_init();
 
 	// Setup pixelflut
 	ESP_ERROR_CHECK(pixelflut_init(&pixelflut, 256, 64, 8192));
