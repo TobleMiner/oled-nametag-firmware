@@ -33,14 +33,14 @@ void webserver_init() {
 	ESP_ERROR_CHECK(httpd_init(&httpd, "/storage", 256));
 	/* Templates */
 	/* Embedded files */
+	ADD_EMBEDDED_TEMPLATE_FILE("include/navbar.thtml", navbar_thtml);
+	ADD_EMBEDDED_STATIC_FILE_HTML("include/resources.html", resources_html);
 	ADD_EMBEDDED_STATIC_FILE_JS("animation.js", animation_js);
 	ADD_EMBEDDED_TEMPLATE_FILE("animation.thtml", animation_thtml);
 	ADD_EMBEDDED_STATIC_FILE_JS("bootstrap.bundle.min.js", bootstrap_bundle_min_js);
 	ADD_EMBEDDED_STATIC_FILE_CSS("bootstrap.min.css", bootstrap_min_css);
 	ADD_EMBEDDED_STATIC_FILE("/favicon.ico", MIME_TYPE_IMAGE_VND_ICON, favicon_ico);
 	ADD_EMBEDDED_STATIC_FILE_JS("jquery-3.3.1.min.js", jquery_3_3_1_min_js);
-	ADD_EMBEDDED_TEMPLATE_FILE("include/navbar.thtml", navbar_thtml);
-	ADD_EMBEDDED_STATIC_FILE_HTML("include/resources.html", resources_html);
 	/* Index */
 	ESP_ERROR_CHECK(httpd_add_redirect(&httpd, "/", "/animation.thtml"));
 }

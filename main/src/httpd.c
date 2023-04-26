@@ -53,6 +53,21 @@ static void httpd_request_ctx_init(struct httpd_request_ctx* ctx, httpd_req_t* r
   ctx->req = req;
 }
 
+static esp_err_t invocation_wrapper(httpd_req_t* req) {
+  struct httpd_request_ctx ctx;
+  struct httpd_handler* hndlr = req->user_ctx;
+  struct httpd_slice_ctx slice_ctx = {
+    .req_ctx = &ctx,
+    .parent = NULL,
+    .parent_ctx = NULL,
+  };
+
+  httpd_request_ctx_init(&ctx, req);
+
+  return hndlr->ops->invoke(hndlr, &slice_ctx);
+}
+
+
 static esp_err_t embedded_template_send(struct httpd_slice_ctx *ctx, struct httpd_embedded_template_file_handler* hndlr) {
   esp_err_t err;
 
@@ -80,38 +95,42 @@ static void httpd_free_embedded_template_file_handler(struct httpd_handler* hndl
   free((char *)hndlr->uri_handler.uri);
 }
 
-struct httpd_handler_ops httpd_embedded_template_file_handler_ops = {
-  .free = httpd_free_embedded_template_file_handler,
-};
+static esp_err_t httpd_embedded_template_file_include_handler(struct httpd_handler* hndlr, struct httpd_slice_ctx *slice_ctx) {
+  struct httpd_embedded_template_file_handler* hndlr_file = HTTPD_HANDLER_TO_HTTPD_EMBEDDED_TEMPLATE_FILE_HANDER(hndlr);
+  esp_err_t err = ESP_OK;
 
-static esp_err_t embedded_template_file_get_handler(httpd_req_t* req) {
-  esp_err_t err;
-  struct httpd_embedded_template_file_handler* hndlr = req->user_ctx;
-  struct httpd_request_ctx ctx;
-  struct httpd_slice_ctx slice_ctx;
-
-  httpd_request_ctx_init(&ctx, req);
-  slice_ctx.req_ctx = &ctx;
-  slice_ctx.parent = NULL;
-  slice_ctx.parent_ctx = NULL;
-
-  printf("httpd: Delivering templated embedded content for %s from @%p\n", req->uri, hndlr->start);
-
-  if ((err = httpd_resp_set_type(req, hndlr->mime_type))) {
-    goto fail;
-  }
-
-  err = embedded_template_send(&slice_ctx, hndlr);
+  err = embedded_template_send(slice_ctx, hndlr_file);
   if (err) {
-    httpd_send_error_msg(&ctx, HTTPD_500, "Failed to render template");
-    goto fail;
+    httpd_send_error_msg(slice_ctx->req_ctx, HTTPD_500, "Failed to render template");
   }
 
-  httpd_resp_send_chunk(req, NULL, 0);
-
-fail:
   return err;
 }
+
+static esp_err_t httpd_embedded_template_file_request_handler(struct httpd_handler* hndlr, struct httpd_slice_ctx *slice_ctx) {
+  struct httpd_embedded_template_file_handler* hndlr_file = HTTPD_HANDLER_TO_HTTPD_EMBEDDED_TEMPLATE_FILE_HANDER(hndlr);
+  httpd_req_t* req = slice_ctx->req_ctx->req;
+  esp_err_t err;
+
+  printf("httpd: Delivering templated embedded content for %s from @%p\n", req->uri, hndlr_file->start);
+
+  if ((err = httpd_resp_set_type(req, hndlr_file->mime_type))) {
+    return err;
+  }
+
+  err = httpd_embedded_template_file_include_handler(hndlr, slice_ctx);
+  if (!err) {
+    httpd_resp_send_chunk(req, NULL, 0);
+  }
+
+  return err;
+}
+
+const struct httpd_handler_ops httpd_embedded_template_file_handler_ops = {
+  .free = httpd_free_embedded_template_file_handler,
+  .include = httpd_embedded_template_file_include_handler,
+  .invoke = httpd_embedded_template_file_request_handler,
+};
 
 static esp_err_t add_embedded_file_template(struct httpd_embedded_template_file_handler **ret, struct httpd* httpd, const char *path, const char *mime_type, const void *start, const void *end) {
   esp_err_t err;
@@ -149,8 +168,8 @@ static esp_err_t add_embedded_file_template(struct httpd_embedded_template_file_
 */
   hndlr->handler.uri_handler.uri = uri;
   hndlr->handler.uri_handler.method = HTTP_GET;
-  hndlr->handler.uri_handler.handler = embedded_template_file_get_handler;
-  hndlr->handler.uri_handler.user_ctx = hndlr;
+  hndlr->handler.uri_handler.handler = invocation_wrapper;
+  hndlr->handler.uri_handler.user_ctx = &hndlr->handler;
 
   hndlr->handler.ops = &httpd_embedded_template_file_handler_ops;
 
@@ -215,57 +234,45 @@ static void httpd_free_static_template_file_handler(struct httpd_handler* hndlr)
   free((char *)hndlr->uri_handler.uri);
 }
 
-struct httpd_handler_ops httpd_static_template_file_handler_ops = {
-  .free = httpd_free_static_template_file_handler,
-};
+static esp_err_t httpd_static_template_file_include_handler(struct httpd_handler* hndlr, struct httpd_slice_ctx *slice_ctx) {
+  struct httpd_static_template_file_handler* hndlr_file = HTTPD_HANDLER_TO_HTTPD_STATIC_TEMPLATE_FILE_HANDER(hndlr);
+  esp_err_t err = ESP_OK;
 
-static esp_err_t static_template_file_get_handler(httpd_req_t* req) {
-  esp_err_t err;
-  const char* mime;
-  struct httpd_static_template_file_handler* hndlr = req->user_ctx;
-  struct httpd_request_ctx ctx;
-  ctx.req = req;
-  struct httpd_slice_ctx slice_ctx;
-
-  httpd_request_ctx_init(&ctx, req);
-  slice_ctx.req_ctx = &ctx;
-  slice_ctx.parent = NULL;
-  slice_ctx.parent_ctx = NULL;
-
-  printf("httpd: Delivering templated static content from %s\n", hndlr->path);
-
-  mime = mime_get_type_from_filename(hndlr->path);
-  if(mime) {
-    printf("Got mime type: %s\n", mime);
-    if((err = httpd_resp_set_type(req, mime))) {
-      goto fail;
-    }
-  }
-
-  err = template_send(&slice_ctx, hndlr);
+  err = template_send(slice_ctx, hndlr_file);
   if (err) {
-    httpd_send_error_msg(&ctx, HTTPD_500, "Failed to render template");
-    goto fail;
+    httpd_send_error_msg(slice_ctx->req_ctx, HTTPD_500, "Failed to render template");
   }
 
-  httpd_resp_send_chunk(req, NULL, 0);
-
-fail:
   return err;
 }
 
-#define HTTPD_HANDLER_TO_HTTPD_STATIC_FILE_HANDER(hndlr) \
-  container_of((hndlr), struct httpd_static_file_handler, handler)
+static esp_err_t httpd_static_template_file_request_handler(struct httpd_handler* hndlr, struct httpd_slice_ctx *slice_ctx) {
+  struct httpd_static_template_file_handler* hndlr_file = HTTPD_HANDLER_TO_HTTPD_STATIC_TEMPLATE_FILE_HANDER(hndlr);
+  esp_err_t err;
+  const char* mime;
 
-static void httpd_free_static_file_handler(struct httpd_handler* hndlr) {
-  struct httpd_static_file_handler* hndlr_static_file = HTTPD_HANDLER_TO_HTTPD_STATIC_FILE_HANDER(hndlr);
-  free(hndlr_static_file->path);
-  // Allthough uri_handler.uri is declared const we use it with dynamically allocated memory
-  free((char*)hndlr->uri_handler.uri);
+  printf("httpd: Delivering templated static content for %s from %s\n", slice_ctx->req_ctx->req->uri, hndlr_file->path);
+
+  mime = mime_get_type_from_filename(hndlr_file->path);
+  if(mime) {
+    printf("Got mime type: %s\n", mime);
+    if((err = httpd_resp_set_type(slice_ctx->req_ctx->req, mime))) {
+      return err;
+    }
+  }
+
+  err = httpd_static_template_file_include_handler(hndlr, slice_ctx);
+  if (!err) {
+    httpd_resp_send_chunk(slice_ctx->req_ctx->req, NULL, 0);
+  }
+
+  return err;
 }
 
-struct httpd_handler_ops httpd_static_file_handler_ops = {
-  .free = httpd_free_static_file_handler,
+const struct httpd_handler_ops httpd_static_template_file_handler_ops = {
+  .free = httpd_free_static_template_file_handler,
+  .include = httpd_static_template_file_include_handler,
+  .invoke = httpd_static_template_file_request_handler,
 };
 
 static esp_err_t add_static_file_template__(struct httpd_static_template_file_handler **ret, struct httpd* httpd, char* path) {
@@ -311,10 +318,10 @@ static esp_err_t add_static_file_template__(struct httpd_static_template_file_ha
 */
   hndlr->handler.uri_handler.uri = uri;
   hndlr->handler.uri_handler.method = HTTP_GET;
-  hndlr->handler.uri_handler.handler = static_template_file_get_handler;
-  hndlr->handler.uri_handler.user_ctx = hndlr;
+  hndlr->handler.uri_handler.handler = invocation_wrapper;
+  hndlr->handler.uri_handler.user_ctx = &hndlr->handler;
 
-  hndlr->handler.ops = &httpd_static_file_handler_ops;
+  hndlr->handler.ops = &httpd_static_template_file_handler_ops;
 
   printf("httpd: Registering static template handler at '%s' for file '%s'\n", uri, path);
 
@@ -345,26 +352,41 @@ fail:
   return err;
 }
 
-static esp_err_t add_static_file_template_(struct httpd_static_template_file_handler **ret, struct httpd* httpd, char* path) {
+static struct httpd_handler *find_handler_by_path(struct httpd* httpd, char* path) {
   struct list_head *cursor;
 
   if (!futil_is_path_relative(path)) {
-    path = futil_relpath(path, httpd->webroot);
+    char *relpath = futil_relpath(path, httpd->webroot);
+
+    if (relpath) {
+      path = relpath;
+    }
   }
 
   LIST_FOR_EACH(cursor, &httpd->handlers) {
     struct httpd_handler* hndlr = LIST_GET_ENTRY(cursor, struct httpd_handler, list);
 
     if (!strcmp(hndlr->uri_handler.uri, path)) {
-      struct httpd_static_template_file_handler *tmpl_hndlr =
-        container_of(hndlr, struct httpd_static_template_file_handler, handler);
-
-      printf("Matched template handler '%s'\n", path);
-      if (ret) {
-        *ret = tmpl_hndlr;
-      }
-      return ESP_OK;
+      return hndlr;
     }
+  }
+
+  return NULL;
+}
+
+static esp_err_t add_static_file_template_(struct httpd_static_template_file_handler **ret, struct httpd* httpd, char* path) {
+  struct httpd_handler* hndlr = find_handler_by_path(httpd, path);
+
+  if (hndlr) {
+    // Fingers crossed the typecast is correct
+    struct httpd_static_template_file_handler *tmpl_hndlr =
+      container_of(hndlr, struct httpd_static_template_file_handler, handler);
+
+    printf("Matched template handler '%s'\n", path);
+    if (ret) {
+      *ret = tmpl_hndlr;
+    }
+    return ESP_OK;
   }
 
   printf("Creating new template handler for '%s'\n", path);
@@ -378,28 +400,25 @@ static esp_err_t add_static_file_template(struct httpd* httpd, char* path) {
 static esp_err_t template_include_prepare_cb(void* priv, struct templ_slice* slice) {
   esp_err_t err;
   struct templ_slice_arg* include_arg = template_slice_get_option(slice, "file");
-  char *fext;
   char *path;
-  struct httpd_static_template_file_handler *hdlr;
   struct httpd* httpd = priv;
 
   if (!include_arg) {
     err = ESP_ERR_INVALID_ARG;
     return err;
   }
-
   path = include_arg->value;
-  fext = futil_get_fext(path);
-  if (strcmp(fext, "thtml")) {
-    /* no preprocessing required for non-templated includes */
-    slice->priv = NULL;
-    return ESP_OK;
-  }
 
-  /* match include filepath to existing handlers */
-  err = add_static_file_template_(&hdlr, httpd, path);
-  if (!err) {
-    slice->priv = hdlr;
+  /* First pass, try matching against existing URI handlers */
+  slice->priv = find_handler_by_path(httpd, path);
+  if (!slice->priv) {
+    /* Second pass, try adding handler for the file */
+    struct httpd_static_template_file_handler *template_hndlr;
+
+    err = add_static_file_template__(&template_hndlr, httpd, path);
+    if (!err) {
+      slice->priv = &template_hndlr->handler;
+    }
   }
 
   return ESP_OK;
@@ -422,12 +441,16 @@ static esp_err_t template_include_cb(void* ctx, void* priv, struct templ_slice* 
   printf("Including file '%s'\n", path);
 
   if(slice->priv) {
-    struct httpd_static_template_file_handler *hdlr = slice->priv;
+    struct httpd_handler *hndlr = slice->priv;
     struct httpd_slice_ctx child_slice_ctx = *slice_ctx;
 
     child_slice_ctx.parent = slice;
     child_slice_ctx.parent_ctx = slice_ctx;
-    err = template_send(&child_slice_ctx, hdlr);
+    if (!hndlr->ops || !hndlr->ops->include) {
+        err = ESP_ERR_INVALID_ARG;
+        goto fail;
+    }
+    err = hndlr->ops->include(hndlr, &child_slice_ctx);
   } else {
     if(futil_is_path_relative(path)) {
       path = futil_path_concat(path, httpd->webroot);
@@ -519,6 +542,7 @@ static ssize_t query_string_decode_value(char* value, size_t len) {
 
 static ssize_t query_string_decode_callback(char** retval, char* str, size_t len) {
   ssize_t proc_len = query_string_decode_value(str, len);
+
   if(proc_len <= 0) {
     return proc_len;
   }
@@ -613,36 +637,59 @@ static esp_err_t xlate_err(int err) {
   return ESP_FAIL;
 }
 
-static esp_err_t embedded_static_file_get_handler(httpd_req_t* req) {
-  esp_err_t err = ESP_OK;
-  struct httpd_embedded_static_file_handler* hndlr = req->user_ctx;
+#define HTTPD_HANDLER_TO_HTTPD_EMBEDDED_STATIC_FILE_HANDLER(hndlr) \
+  container_of((hndlr), struct httpd_embedded_static_file_handler, handler)
 
-  printf("httpd: Delivering static content for '%s' from embedded static file @%p\n", req->uri, hndlr->start);
+static esp_err_t httpd_embedded_static_file_include_handler(struct httpd_handler* hndlr, struct httpd_slice_ctx *slice_ctx) {
+  struct httpd_embedded_static_file_handler* hndlr_embedded_file = HTTPD_HANDLER_TO_HTTPD_EMBEDDED_STATIC_FILE_HANDLER(hndlr);
+  esp_err_t err;
 
-  if(hndlr->flags.gzip) {
+  if(hndlr_embedded_file->flags.gzip) {
+    httpd_send_error_msg(slice_ctx->req_ctx, HTTPD_500, "Can not include GZIP compressed data");
+    return ESP_ERR_INVALID_ARG;
+  }
+
+  if ((err = httpd_resp_send_chunk(slice_ctx->req_ctx->req, hndlr_embedded_file->start, hndlr_embedded_file->end - hndlr_embedded_file->start))) {
+    return err;
+  }
+
+  return ESP_OK;
+}
+
+static esp_err_t httpd_embedded_static_file_request_handler(struct httpd_handler* hndlr, struct httpd_slice_ctx *slice_ctx) {
+  struct httpd_embedded_static_file_handler* hndlr_embedded_file = HTTPD_HANDLER_TO_HTTPD_EMBEDDED_STATIC_FILE_HANDLER(hndlr);
+  esp_err_t err;
+
+  printf("httpd: Delivering static content for %s from embedded file @%p\n", slice_ctx->req_ctx->req->uri, hndlr_embedded_file->start);
+
+  if(hndlr_embedded_file->flags.gzip) {
     printf("httpd: Content is gzip compressed, setting Content-Encoding header\n");
-    if((err = httpd_resp_set_hdr(req, "Content-Encoding", "gzip"))) {
-      goto fail;
+    if((err = httpd_resp_set_hdr(slice_ctx->req_ctx->req, "Content-Encoding", "gzip"))) {
+      return err;
     }
   }
 
-  // This is a static file, set a nice long cache lifetime
-  if((err = httpd_resp_set_hdr(req, "Cache-Control", "public, immutable, max-age=31536000"))) {
-    goto fail;
+  // This is a static file, set nice long cache lifetime
+  if((err = httpd_resp_set_hdr(slice_ctx->req_ctx->req, "Cache-Control", "public, immutable, max-age=31536000"))) {
+    return err;
   }
 
-  if((err = httpd_resp_set_type(req, hndlr->mime_type))) {
-    goto fail;
+  if((err = httpd_resp_set_type(slice_ctx->req_ctx->req, hndlr_embedded_file->mime_type))) {
+    return err;
   }
 
-  if ((err = httpd_resp_send_chunk(req, hndlr->start, hndlr->end - hndlr->start))) {
-    goto fail;
+  if ((err = httpd_resp_send_chunk(slice_ctx->req_ctx->req, hndlr_embedded_file->start, hndlr_embedded_file->end - hndlr_embedded_file->start))) {
+    return err;
   }
-  httpd_resp_send_chunk(req, NULL, 0);
+  httpd_resp_send_chunk(slice_ctx->req_ctx->req, NULL, 0);
 
-fail:
-  return err;
+  return ESP_OK;
 }
+
+struct httpd_handler_ops httpd_embedded_static_file_handler_ops = {
+  .include = httpd_embedded_static_file_include_handler,
+  .invoke = httpd_embedded_static_file_request_handler,
+};
 
 esp_err_t httpd_add_embedded_static_file(struct httpd* httpd, const char* path, const char *mime_type, const void *ptr_start, const void *ptr_end) {
   esp_err_t err;
@@ -672,8 +719,9 @@ esp_err_t httpd_add_embedded_static_file(struct httpd* httpd, const char* path, 
 
   hndlr->handler.uri_handler.uri = uri;
   hndlr->handler.uri_handler.method = HTTP_GET;
-  hndlr->handler.uri_handler.handler = embedded_static_file_get_handler;
-  hndlr->handler.uri_handler.user_ctx = hndlr;
+  hndlr->handler.uri_handler.handler = invocation_wrapper;
+  hndlr->handler.uri_handler.user_ctx = &hndlr->handler;
+  hndlr->handler.ops = &httpd_embedded_static_file_handler_ops;
 
   printf("httpd: Registering embedded static file handler at '%s' for file @%p, gzip: %u\n", uri, ptr_start, hndlr->flags.gzip);
 
@@ -693,44 +741,73 @@ fail:
   return err;
 }
 
-static esp_err_t static_file_get_handler(httpd_req_t* req) {
+#define HTTPD_HANDLER_TO_HTTPD_STATIC_FILE_HANDER(hndlr) \
+  container_of((hndlr), struct httpd_static_file_handler, handler)
+
+static void httpd_free_static_file_handler(struct httpd_handler* hndlr) {
+  struct httpd_static_file_handler* hndlr_static_file = HTTPD_HANDLER_TO_HTTPD_STATIC_FILE_HANDER(hndlr);
+  free(hndlr_static_file->path);
+  // Allthough uri_handler.uri is declared const we use it with dynamically allocated memory
+  free((char*)hndlr->uri_handler.uri);
+}
+
+static esp_err_t httpd_static_file_include_handler(struct httpd_handler* hndlr, struct httpd_slice_ctx *slice_ctx) {
+  struct httpd_static_file_handler* hndlr_static_file = HTTPD_HANDLER_TO_HTTPD_STATIC_FILE_HANDER(hndlr);
+  esp_err_t err;
+
+  if(hndlr_static_file->flags.gzip) {
+    httpd_send_error_msg(slice_ctx->req_ctx, HTTPD_500, "Can not include GZIP compressed data");
+    return ESP_ERR_INVALID_ARG;
+  }
+
+  if((err = futil_read_file(slice_ctx->req_ctx, hndlr_static_file->path, request_send_chunk))) {
+    return err;
+  }
+
+  return ESP_OK;
+}
+
+static esp_err_t httpd_static_file_request_handler(struct httpd_handler* hndlr, struct httpd_slice_ctx *slice_ctx) {
+  struct httpd_static_file_handler* hndlr_static_file = HTTPD_HANDLER_TO_HTTPD_STATIC_FILE_HANDER(hndlr);
   esp_err_t err = ESP_OK;
   const char* mime;
-  struct httpd_request_ctx ctx;
-  struct httpd_static_file_handler* hndlr = req->user_ctx;
 
-  httpd_request_ctx_init(&ctx, req);
+  printf("httpd: Delivering static content for %s from %s\n", slice_ctx->req_ctx->req->uri, hndlr_static_file->path);
 
-  printf("httpd: Delivering static content from %s\n", hndlr->path);
-
-  if(hndlr->flags.gzip) {
+  if(hndlr_static_file->flags.gzip) {
     printf("httpd: Content is gzip compressed, setting Content-Encoding header\n");
-    if((err = httpd_resp_set_hdr(req, "Content-Encoding", "gzip"))) {
+    if((err = httpd_resp_set_hdr(slice_ctx->req_ctx->req, "Content-Encoding", "gzip"))) {
       goto fail;
     }
   }
 
-  if((err = httpd_resp_set_hdr(req, "Cache-Control", "public, immutable, max-age=31536000"))) {
+  if((err = httpd_resp_set_hdr(slice_ctx->req_ctx->req, "Cache-Control", "public, immutable, max-age=31536000"))) {
     goto fail;
   }
 
-  mime = mime_get_type_from_filename(hndlr->path);
+  mime = mime_get_type_from_filename(hndlr_static_file->path);
   if(mime) {
     printf("Got mime type: %s\n", mime);
-    if((err = httpd_resp_set_type(req, mime))) {
+    if((err = httpd_resp_set_type(slice_ctx->req_ctx->req, mime))) {
       goto fail;
     }
   }
 
-  if((err = futil_read_file(&ctx, hndlr->path, request_send_chunk))) {
+  if((err = futil_read_file(slice_ctx->req_ctx, hndlr_static_file->path, request_send_chunk))) {
     goto fail;
   }
 
-  httpd_resp_send_chunk(req, NULL, 0);
+  httpd_resp_send_chunk(slice_ctx->req_ctx->req, NULL, 0);
 
 fail:
   return err;
 }
+
+struct httpd_handler_ops httpd_static_file_handler_ops = {
+  .free = httpd_free_static_file_handler,
+  .include = httpd_static_file_include_handler,
+  .invoke = httpd_static_file_request_handler,
+};
 
 static esp_err_t httpd_add_static_file_default(struct httpd* httpd, char* path) {
   esp_err_t err;
@@ -764,8 +841,8 @@ static esp_err_t httpd_add_static_file_default(struct httpd* httpd, char* path) 
 
   hndlr->handler.uri_handler.uri = uri;
   hndlr->handler.uri_handler.method = HTTP_GET;
-  hndlr->handler.uri_handler.handler = static_file_get_handler;
-  hndlr->handler.uri_handler.user_ctx = hndlr;
+  hndlr->handler.uri_handler.handler = invocation_wrapper;
+  hndlr->handler.uri_handler.user_ctx = &hndlr->handler;
 
   hndlr->handler.ops = &httpd_static_file_handler_ops;
 
@@ -825,7 +902,7 @@ static esp_err_t redirect_handler(httpd_req_t* req) {
     goto fail;
   }
 
-  printf("httpd: Delivering redirect to %s\n", hndlr->location);
+  printf("httpd: Delivering redirect from %s to %s\n", req->uri, hndlr->location);
 
   httpd_resp_send_chunk(req, NULL, 0);
 

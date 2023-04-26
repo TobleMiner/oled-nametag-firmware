@@ -27,14 +27,18 @@ typedef struct httpd {
 
 struct httpd_handler;
 
+struct httpd_slice_ctx;
+
 struct httpd_handler_ops {
   void (*free)(struct httpd_handler* hndlr);
+  esp_err_t (*include)(struct httpd_handler* hndlr, struct httpd_slice_ctx *slice_ctx);
+  esp_err_t (*invoke)(struct httpd_handler* hndlr, struct httpd_slice_ctx *slice_ctx);
 };
 
 struct httpd_handler {
   struct list_head list;
   httpd_uri_t uri_handler;
-  struct httpd_handler_ops* ops;
+  const struct httpd_handler_ops* ops;
 };
 
 struct httpd_static_template_file_handler {
@@ -103,8 +107,6 @@ struct httpd_request_handler {
   void* priv;
   httpd_request_cb cb;
 };
-
-struct httpd_slice_ctx;
 
 struct httpd_slice_ctx {
   struct httpd_request_ctx *req_ctx;

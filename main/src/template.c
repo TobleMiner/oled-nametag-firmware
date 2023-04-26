@@ -421,7 +421,6 @@ esp_err_t template_apply_(struct templ_instance* instance, void *read_ctx, read_
       filepos += read_len;
     }
 
-
     if(slice->entry) {
       if((err = slice->entry->cb(ctx, slice->entry->priv, slice))) {
         goto fail;
