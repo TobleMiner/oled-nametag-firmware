@@ -44,8 +44,10 @@ $(function() {
       })
       .fail(function(xhr) {
         $(".js-upload-progress").addClass("bg-danger");
-        if (xhr.responseJSON && xhr.responseJSON["error"]) { 
+        if (xhr.responseJSON && xhr.responseJSON["error"]) {
           addToast("Upload failed", xhr.responseJSON["error"]);
+        } else {
+          addToast("Upload failed", xhr.statusText);
         }
       })
       .always(function() {
@@ -53,8 +55,8 @@ $(function() {
         $(".js-modal-upload").modal('hide');
       });
     };
-    $(".js-upload-progress").css("width", "0%").attr("aria-valuenow", "0").removeClass("bg-danger");
     $(".js-modal-upload").modal('show');
+    $(".js-upload-progress").css("width", "0%").attr("aria-valuenow", "0").removeClass("bg-danger");
     reader.readAsArrayBuffer(file);
 
     event.preventDefault();

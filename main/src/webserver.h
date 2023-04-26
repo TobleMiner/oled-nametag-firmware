@@ -1,3 +1,6 @@
 #pragma once
 
-void webserver_init();
+#include "httpd.h"
+
+httpd_t *webserver_preinit();
+void webserver_init(httpd_t *httpd);

@@ -3,6 +3,9 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <sys/types.h>
+
+#include <esp_err.h>
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(*(arr)))
@@ -70,3 +73,7 @@ void strntr(char* str, size_t len, char a, char b);
 
 #define hex_to_byte(hex) \
   ((hex_to_nibble((hex)[0]) << 4) | hex_to_nibble((hex)[1]))
+
+ssize_t hex_decode_inplace(uint8_t *ptr, size_t len);
+
+esp_err_t xlate_err(int err);

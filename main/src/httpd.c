@@ -352,11 +352,11 @@ fail:
   return err;
 }
 
-static struct httpd_handler *find_handler_by_path(struct httpd* httpd, char* path) {
+static struct httpd_handler *find_handler_by_path(struct httpd* httpd, const char* path) {
   struct list_head *cursor;
 
   if (!futil_is_path_relative(path)) {
-    char *relpath = futil_relpath(path, httpd->webroot);
+    const char *relpath = futil_relpath(path, httpd->webroot);
 
     if (relpath) {
       path = relpath;
@@ -474,7 +474,7 @@ fail:
   return err;
 }
 
-static char *slice_scope_get_variable(struct httpd_slice_ctx *slice, const char* name) {
+char *slice_scope_get_variable(struct httpd_slice_ctx *slice, const char* name) {
   struct templ_slice_arg* variable;
 
   while (slice && slice->parent) {
@@ -615,26 +615,6 @@ fail_webroot_alloc:
   free(httpd->webroot);
 fail:
   return err;
-}
-
-static esp_err_t xlate_err(int err) {
-  switch(err) {
-    case ENOMEM:
-      return ESP_ERR_NO_MEM;
-    case EBADF:
-    case EACCES:
-    case ENOENT:
-    case ENOTDIR:
-    case EIO:
-    case ENAMETOOLONG:
-    case EOVERFLOW:
-      return ESP_ERR_INVALID_ARG;
-    case EMFILE:
-    case ENFILE:
-    case ELOOP:
-      return ESP_ERR_INVALID_STATE;
-  }
-  return ESP_FAIL;
 }
 
 #define HTTPD_HANDLER_TO_HTTPD_EMBEDDED_STATIC_FILE_HANDLER(hndlr) \

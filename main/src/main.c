@@ -12,7 +12,9 @@
 #include "esp_system.h"
 #include "esp_timer.h"
 
+#include "api.h"
 #include "flash.h"
+#include "gifplayer.h"
 #include "pixelflut/pixelflut.h"
 #include "webserver.h"
 
@@ -62,7 +64,8 @@ void oled_init(spi_device_handle_t spidev)
 
 	OLED_CMD(0xFD, 0x12);		// Unlock IC for writing
 	OLED_CMD(0xAE);			// Sleep mode on
-	OLED_CMD(0xB3, 0xBF);		// Set clock divider
+//	OLED_CMD(0xB3, 0xBF);		// Set clock divider
+	OLED_CMD(0xB3, 0x91);		// Set clock divider
 	OLED_CMD(0xCA, 0x3F);		// Set multiplexing ratio (1/64)
 	OLED_CMD(0xA2, 0x00);		// Zero out display offset
 	OLED_CMD(0xA1, 0x00);		// Zero out starting line
@@ -71,7 +74,8 @@ void oled_init(spi_device_handle_t spidev)
 	OLED_CMD(0xB5, 0x00);		// Disable GPIOs
 	OLED_CMD(0xAB, 0x01);		// Enable internal VDD regulator
 	OLED_CMD(0xB4, 0xA0, 0xFD);	// Use internal VSL, Enhanced display quality
-	OLED_CMD(0xC1, 0xFF);		// Maximum contrast
+//	OLED_CMD(0xC1, 0xFF);		// Maximum contrast
+	OLED_CMD(0xC1, 0x9F);		// Maximum contrast
 	OLED_CMD(0xC7, 0x0F);		// Maximum drive current
 	OLED_CMD(0xB9);			// Enable grayscale mode
 	OLED_CMD(0xB1, 0xE2);		// Phase length, phase1 = 5 DCLK, phase2 = 14 DCLK
@@ -121,6 +125,11 @@ void wifi_main(void);
 
 static pixelflut_t pixelflut;
 static uint8_t oled_fb[8192];
+static uint8_t rgb888_fb[256 * 64 * 3];
+
+static inline unsigned int rgb_to_grayscale(const uint8_t *rgb) {
+	return (rgb[0] + rgb[1] + rgb[2]) / 3;
+}
 
 static inline unsigned int rgb_pixel_to_grayscale(union fb_pixel px) {
 	unsigned int red = px.color.color_bgr.red;
@@ -128,6 +137,16 @@ static inline unsigned int rgb_pixel_to_grayscale(union fb_pixel px) {
 	unsigned int blue = px.color.color_bgr.blue;
 	unsigned int avg = (red + green + blue) / 3;
 	return avg;
+}
+
+static void fb_convert(uint8_t *grayscale, const uint8_t *rgb888) {
+	for (int y = 0; y < 64; y++) {
+		for (int x = 0; x < 256 / 2; x++) {
+			unsigned int int1 = rgb_to_grayscale(rgb888 + (y * 256 + x * 2 + 1) * 3);
+			unsigned int int2 = rgb_to_grayscale(rgb888 + (y * 256 + x * 2 + 0) * 3);
+			grayscale[y * 128 + x] = (int1 >> 4) | (int2 & 0xf0);
+		}
+	}
 }
 
 void app_main(void)
@@ -165,13 +184,18 @@ void app_main(void)
 	oled_init(spidev);
 
 	// Mount main fat storage
-	ESP_ERROR_CHECK(flash_fatfs_mount("storage", "/storage"));
+	ESP_ERROR_CHECK(flash_fatfs_mount("flash", "/flash"));
 
 	// Setup WiFi
 	wifi_main();
 
+	// Setup gifplayer
+	gifplayer_init();
+
 	// Setup webserver
-	webserver_init();
+	httpd_t *httpd = webserver_preinit();
+	api_init(httpd);
+	webserver_init(httpd);
 
 	// Setup pixelflut
 	ESP_ERROR_CHECK(pixelflut_init(&pixelflut, 256, 64, 8192));
@@ -181,7 +205,41 @@ void app_main(void)
 
 	int64_t last = esp_timer_get_time();
 	uint32_t flips = 0;
+	bool slot = false;
+	int last_frame_duration_ms = 0;
 	while (1) {
+		gifplayer_lock();
+		if (gifplayer_is_animation_playing()) {
+			int frame_duration_ms;
+
+			int64_t time_start_us = esp_timer_get_time();
+			oled_show_image(spidev, slot ? 1 : 0);
+			slot = !slot;
+			gifplayer_render_next_frame_(rgb888_fb, 256, 64, &frame_duration_ms);
+			gifplayer_unlock();
+			fb_convert(oled_fb, rgb888_fb);
+			oled_write_image(spidev, oled_fb, slot ? 1 : 0);
+			int64_t time_display_us = last_frame_duration_ms * 1000;
+			int64_t time_finish_us = esp_timer_get_time();
+			int64_t time_passed = time_finish_us - time_start_us;
+			int64_t time_wait = time_display_us - time_passed;
+			// TODO: use CONFIG_FREERTOS_HZ
+			if (time_wait < 10000) {
+				vTaskDelay(1);
+			} else {
+				vTaskDelay(time_wait / 10000);
+				do {
+					time_finish_us = esp_timer_get_time();
+					time_passed = time_finish_us - time_start_us;
+					time_wait = time_display_us - time_passed;
+				} while (time_wait > 0);
+			}
+			last_frame_duration_ms = frame_duration_ms;
+		} else {
+			gifplayer_unlock();
+			vTaskDelay(5);
+		}
+/*
 		for (int i = 0; i < 2; i++) {
 			for (int y = 0; y < 64; y++) {
 				for (int x = 0; x < 256 / 2; x++) {
@@ -204,5 +262,6 @@ void app_main(void)
 			vTaskDelay(2);
 //	 		taskYIELD();
 		}
+*/
 	}
 }

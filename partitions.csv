@@ -10,4 +10,4 @@ config,			data,	nvs,		0x1a000,	0x06000
 factory,		app,	factory,	0x20000,	3M,
 ota_0,			app,	ota_0,		,		3M,
 ota_1,			app,	ota_1,		,		3M,
-storage,		data,	fat,		,		6M,
+flash,			data,	fat,		,		6M,

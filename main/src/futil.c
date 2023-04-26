@@ -18,7 +18,7 @@ void futil_normalize_path(char* path) {
   }
 }
 
-char* futil_relpath(char* path, const char* basepath) {
+const char* futil_relpath(const char* path, const char* basepath) {
   size_t base_len = strlen(basepath);
   size_t path_len = strlen(path);
 
