@@ -72,7 +72,9 @@ fail:
 
 static esp_err_t template_alloc_slice_arg(struct templ_slice_arg** retval, char* key, char* value) {
   esp_err_t err;
-  struct templ_slice_arg* arg = calloc(1, sizeof(struct templ_slice_arg));
+  struct templ_slice_arg* arg;
+
+  arg = calloc(1, sizeof(struct templ_slice_arg));
   if(!arg) {
     ESP_LOGE(TAG, "Failed to allocate slice, out of memory");
     err = ESP_ERR_NO_MEM;
@@ -147,7 +149,9 @@ static esp_err_t slice_parse_options(struct templ_slice* slice, char* options) {
   return ESP_OK;
 }
 
-esp_err_t template_alloc_instance_fd(struct templ_instance** retval, struct templ* templ, int fd) {
+typedef ssize_t (*read_cb)(void *ctx, void *ptr, size_t len);
+
+static esp_err_t template_alloc_instance_(struct templ_instance** retval, struct templ* templ, void *ctx, read_cb cb) {
   esp_err_t err;
   size_t max_id_len = TEMPLATE_ID_LEN_DEFAULT, filepos = 0;
   ssize_t read_len = 0, suffix_len = strlen(TEMPLATE_ID_SUFFIX);
@@ -155,7 +159,9 @@ esp_err_t template_alloc_instance_fd(struct templ_instance** retval, struct temp
   struct templ_slice* slice = NULL;
   struct ring* ring;
   struct list_head* cursor, *next;
-  struct templ_instance* instance = calloc(1, sizeof(struct templ_instance));
+  struct templ_instance* instance;
+
+  instance = calloc(1, sizeof(struct templ_instance));
   if(!instance) {
     ESP_LOGE(TAG, "Failed to allocate template for fd, out of memory");
     err = ESP_ERR_NO_MEM;
@@ -180,7 +186,7 @@ esp_err_t template_alloc_instance_fd(struct templ_instance** retval, struct temp
 
   do {
 read_more:
-    read_len = read(fd, ring->ptr_write, ring_free_space_contig(ring));
+    read_len = cb(ctx, ring->ptr_write, ring_free_space_contig(ring));
     if(read_len < 0) {
       err = errno;
       goto fail_slices;
@@ -295,6 +301,42 @@ fail:
   return err;
 }
 
+static ssize_t read_fd_cb(void *ctx, void *ptr, size_t len) {
+	return read((int)ctx, ptr, len);
+}
+
+esp_err_t template_alloc_instance_fd(struct templ_instance** retval, struct templ* templ, int fd) {
+	return template_alloc_instance_(retval, templ, (void *)fd, read_fd_cb);
+}
+
+struct embedded_read_ctx {
+	const unsigned char *start;
+	size_t len;
+};
+
+static ssize_t read_embedded_cb(void *ctx, void *ptr, size_t len) {
+	struct embedded_read_ctx *read_ctx = ctx;
+
+	if (read_ctx->len < len) {
+		len = read_ctx->len;
+	}
+
+	memcpy(ptr, read_ctx->start, len);
+	read_ctx->start += len;
+	read_ctx->len -= len;
+
+	return len;
+}
+
+esp_err_t template_alloc_instance_embedded(struct templ_instance** retval, struct templ* templ, const void *start, const void *end) {
+	struct embedded_read_ctx read_ctx = {
+		.start = start,
+		.len = (const char *)end - (const char *)start
+	};
+
+	return template_alloc_instance_(retval, templ, &read_ctx, read_embedded_cb);
+}
+
 esp_err_t template_add(struct templ* templ, char* id, templ_cb cb, prepare_cb prepare, void* priv) {
   esp_err_t err;
   size_t buff_len;
@@ -352,19 +394,21 @@ fail:
   return err;
 };
 
-esp_err_t template_apply_fd(struct templ_instance* instance, int fd, templ_write_cb cb, void* ctx) {
+esp_err_t template_apply_(struct templ_instance* instance, void *read_ctx, read_cb read_cb, templ_write_cb cb, void* ctx) {
   esp_err_t err = ESP_OK;
   size_t filepos = 0;
   char buff[TEMPLATE_BUFF_SIZE];
   struct list_head* cursor;
 
   LIST_FOR_EACH(cursor, &instance->slices) {
-    struct templ_slice* slice = LIST_GET_ENTRY(cursor, struct templ_slice, list);
+    struct templ_slice* slice;
 
+    slice = LIST_GET_ENTRY(cursor, struct templ_slice, list);
     // Skip to start of slice
     while(filepos < slice->start) {
       size_t max_read_len = MIN(sizeof(buff), slice->start - filepos);
-      ssize_t read_len = read(fd, buff, max_read_len);
+      ssize_t read_len = read_cb(read_ctx, buff, max_read_len);
+
       if(read_len < 0) {
         err = errno;
         goto fail;
@@ -386,7 +430,8 @@ esp_err_t template_apply_fd(struct templ_instance* instance, int fd, templ_write
       // Write out slice
       while(filepos < slice->end) {
         size_t max_read_len = MIN(sizeof(buff), slice->end - filepos);
-        ssize_t read_len = read(fd, buff, max_read_len);
+        ssize_t read_len = read_cb(read_ctx, buff, max_read_len);
+
         if(read_len < 0) {
           err = errno;
           goto fail;
@@ -407,6 +452,19 @@ esp_err_t template_apply_fd(struct templ_instance* instance, int fd, templ_write
 
 fail:
   return err;
+}
+
+esp_err_t template_apply_embedded(struct templ_instance* instance, const void *start, const void *end, templ_write_cb cb, void* ctx) {
+  struct embedded_read_ctx read_ctx = {
+    .start = start,
+    .len = end - start
+  };
+
+  return template_apply_(instance, &read_ctx, read_embedded_cb, cb, ctx);
+}
+
+esp_err_t template_apply_fd(struct templ_instance* instance, int fd, templ_write_cb cb, void* ctx) {
+  return template_apply_(instance, (void *)fd, read_fd_cb, cb, ctx);
 }
 
 struct templ_slice_arg* template_slice_get_option(struct templ_slice* slice, const char* id) {

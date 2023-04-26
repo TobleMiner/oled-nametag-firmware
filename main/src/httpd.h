@@ -43,6 +43,14 @@ struct httpd_static_template_file_handler {
   struct templ_instance* templ;
 };
 
+struct httpd_embedded_template_file_handler {
+  struct httpd_handler handler;
+  const char *mime_type;
+  const void *start;
+  const void *end;
+  struct templ_instance* templ;
+};
+
 typedef uint8_t httpd_static_file_handler_flags;
 
 struct httpd_static_file_handler {
@@ -111,7 +119,7 @@ esp_err_t httpd_alloc(struct httpd** retval, const char* webroot, uint16_t max_n
 esp_err_t httpd_init(struct httpd* httpd, const char* webroot, uint16_t max_num_handlers);
 esp_err_t __httpd_add_static_path(struct httpd* httpd, const char* dir, char* name);
 esp_err_t httpd_add_embedded_static_file(struct httpd *httpd, const char *path, const char *mime_type, const void *ptr_start, const void *ptr_end);
-esp_err_t httpd_add_embedded_template(struct httpd *httpd, const char *path, const void *ptr_start, const void *ptr_end);
+esp_err_t httpd_add_embedded_template_file(struct httpd *httpd, const char *path, const char *mime_type, const void *ptr_start, const void *ptr_end);
 esp_err_t httpd_add_redirect(struct httpd* httpd, const char* from, const char* to);
 esp_err_t httpd_response_write(struct httpd_request_ctx* ctx, const char* buff, size_t len);
 ssize_t httpd_query_string_get_param(struct httpd_request_ctx* ctx, const char* param, char** value);

@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html>
   <head>
-    [/{include,file=include/resources.html}/]
+    {{include,file=include/resources.html}}
     <title>Animation</title>
     <script src="/js/animation.js" type="text/javascript"></script>
   </head>
   <body>
-    [/{include,file=include/navbar.thtml,page=animation}/]
+    {{include,file=include/navbar.thtml,page=animation}}
     <div class="position-fixed top-0 end-0 mt-2 me-2 js-toasts" style="z-index: 11">
     </div>
     <div class="modal fade js-modal-upload" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">

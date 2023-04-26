@@ -47,6 +47,141 @@ static esp_err_t request_send_chunk_templ(void* ctx, char* buff, size_t len) {
   return httpd_resp_send_chunk(slice_ctx->req_ctx->req, buff, len);
 }
 
+static void httpd_request_ctx_init(struct httpd_request_ctx* ctx, httpd_req_t* req) {
+  INIT_LIST_HEAD(ctx->form_data);
+  INIT_LIST_HEAD(ctx->query_params);
+  ctx->req = req;
+}
+
+static esp_err_t embedded_template_send(struct httpd_slice_ctx *ctx, struct httpd_embedded_template_file_handler* hndlr) {
+  esp_err_t err;
+
+  if((err = httpd_resp_set_type(ctx->req_ctx->req, hndlr->mime_type))) {
+    goto fail;
+  }
+
+  if((err = template_apply_embedded(hndlr->templ, hndlr->start, hndlr->end, request_send_chunk_templ, ctx))) {
+    printf("Failed to apply embedded template: %d\n", err);
+    goto fail;
+  }
+
+fail:
+  return err;
+}
+
+#define HTTPD_HANDLER_TO_HTTPD_EMBEDDED_TEMPLATE_FILE_HANDER(hndlr) \
+  container_of((hndlr), struct httpd_embedded_template_file_handler, handler)
+
+static void httpd_free_embedded_template_file_handler(struct httpd_handler* hndlr) {
+  struct httpd_embedded_template_file_handler* hndlr_file = HTTPD_HANDLER_TO_HTTPD_EMBEDDED_TEMPLATE_FILE_HANDER(hndlr);
+
+  template_free_instance(hndlr_file->templ);
+  // Allthough uri_handler.uri is declared const we use it with dynamically allocated memory
+  free((char *)hndlr->uri_handler.uri);
+}
+
+struct httpd_handler_ops httpd_embedded_template_file_handler_ops = {
+  .free = httpd_free_embedded_template_file_handler,
+};
+
+static esp_err_t embedded_template_file_get_handler(httpd_req_t* req) {
+  esp_err_t err;
+  struct httpd_embedded_template_file_handler* hndlr = req->user_ctx;
+  struct httpd_request_ctx ctx;
+  struct httpd_slice_ctx slice_ctx;
+
+  httpd_request_ctx_init(&ctx, req);
+  slice_ctx.req_ctx = &ctx;
+  slice_ctx.parent = NULL;
+  slice_ctx.parent_ctx = NULL;
+
+  printf("httpd: Delivering templated embedded content for %s from @%p\n", req->uri, hndlr->start);
+
+  if ((err = httpd_resp_set_type(req, hndlr->mime_type))) {
+    goto fail;
+  }
+
+  err = embedded_template_send(&slice_ctx, hndlr);
+  if (err) {
+    httpd_send_error_msg(&ctx, HTTPD_500, "Failed to render template");
+    goto fail;
+  }
+
+  httpd_resp_send_chunk(req, NULL, 0);
+
+fail:
+  return err;
+}
+
+static esp_err_t add_embedded_file_template(struct httpd_embedded_template_file_handler **ret, struct httpd* httpd, const char *path, const char *mime_type, const void *start, const void *end) {
+  esp_err_t err;
+  char *uri;
+  struct httpd_embedded_template_file_handler* hndlr;
+
+  hndlr = calloc(1, sizeof(struct httpd_embedded_template_file_handler));
+  if(!hndlr) {
+    err = ESP_ERR_NO_MEM;
+    goto fail;
+  }
+  hndlr->mime_type = mime_type;
+  hndlr->start = start;
+  hndlr->end = end;
+
+  if((err = template_alloc_instance_embedded(&hndlr->templ, &httpd->templates, start, end))) {
+    printf("Failed to allocate embedded template instance: %d\n", err);
+    goto fail_handler_alloc;
+  }
+
+  uri = strdup(path);
+  if(!uri) {
+    err = ESP_ERR_NO_MEM;
+    goto fail_template_alloc;
+  }
+
+  futil_normalize_path(uri);
+/*
+  if (!futil_is_path_relative(uri)) {
+    if((err = futil_relpath_inplace(uri, httpd->webroot))) {
+      printf("Failed to create relative path\n");
+      goto fail_uri_alloc;
+    }
+  }
+*/
+  hndlr->handler.uri_handler.uri = uri;
+  hndlr->handler.uri_handler.method = HTTP_GET;
+  hndlr->handler.uri_handler.handler = embedded_template_file_get_handler;
+  hndlr->handler.uri_handler.user_ctx = hndlr;
+
+  hndlr->handler.ops = &httpd_embedded_template_file_handler_ops;
+
+  printf("httpd: Registering embedded template handler at '%s' from template @%p\n", uri, start);
+
+  if((err = httpd_register_uri_handler(httpd->server, &hndlr->handler.uri_handler))) {
+    goto fail_uri_alloc;
+  }
+
+  LIST_APPEND(&hndlr->handler.list, &httpd->handlers);
+
+  if (ret) {
+    *ret = hndlr;
+  }
+
+  return ESP_OK;
+
+fail_uri_alloc:
+  free(uri);
+fail_template_alloc:
+  template_free_instance(hndlr->templ);
+fail_handler_alloc:
+  free(hndlr);
+fail:
+  return err;
+}
+
+esp_err_t httpd_add_embedded_template_file(struct httpd *httpd, const char *path, const char *mime_type, const void *ptr_start, const void *ptr_end) {
+  return add_embedded_file_template(NULL, httpd, path, mime_type, ptr_start, ptr_end);
+}
+
 static esp_err_t template_send(struct httpd_slice_ctx *ctx, struct httpd_static_template_file_handler* hndlr) {
   esp_err_t err;
   const char* mime;
@@ -60,7 +195,7 @@ static esp_err_t template_send(struct httpd_slice_ctx *ctx, struct httpd_static_
   }
 
   if((err = template_apply(hndlr->templ, hndlr->path, request_send_chunk_templ, ctx))) {
-    printf("Failed to apply template: %d\n", err);
+    printf("Failed to apply static template: %d\n", err);
     goto fail;
   }
 
@@ -68,17 +203,12 @@ fail:
   return err;
 }
 
-static void httpd_request_ctx_init(struct httpd_request_ctx* ctx, httpd_req_t* req) {
-  INIT_LIST_HEAD(ctx->form_data);
-  INIT_LIST_HEAD(ctx->query_params);
-  ctx->req = req;
-}
-
 #define HTTPD_HANDLER_TO_HTTPD_STATIC_TEMPLATE_FILE_HANDER(hndlr) \
   container_of((hndlr), struct httpd_static_template_file_handler, handler)
 
 static void httpd_free_static_template_file_handler(struct httpd_handler* hndlr) {
   struct httpd_static_template_file_handler* hndlr_file = HTTPD_HANDLER_TO_HTTPD_STATIC_TEMPLATE_FILE_HANDER(hndlr);
+
   free(hndlr_file->path);
   template_free_instance(hndlr_file->templ);
   // Allthough uri_handler.uri is declared const we use it with dynamically allocated memory
