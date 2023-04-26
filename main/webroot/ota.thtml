@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    [/{include,file=include/resources.html}/]
+    <title>V4 OTA firmare update</title>
+    <script src="/js/ota.js" type="text/javascript"></script>
+  </head>
+  <body>
+    [/{include,file=include/navbar.thtml,page=ota}/]
+    <div class="position-fixed top-0 end-0 mt-2 me-2 js-toasts" style="z-index: 11">
+    </div>
+    <div class="modal fade js-modal-upload" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="staticBackdropLabel">Uploading OTA update</h5>
+          </div>
+          <div class="modal-body">
+            <div class="progress">
+              <div class="progress-bar progress-bar-striped js-upload-progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade js-modal-reboot" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="staticBackdropLabel">Rebooting</h5>
+          </div>
+          <div class="modal-body">
+            <div class="progress">
+              <div class="progress-bar progress-bar-striped js-reboot-progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="container mt-2">
+      <div class="row">
+        <div class="col d-flex align-items-stretch">
+          <div class="card mb-3 w-100">
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title">Booted firmware partition</h5>
+              <div>
+		<!--Badges here-->
+              </div>
+              <table class="table table-borderless">
+                <tbody>
+                  <tr>
+                    <td>Partition:</td>
+                    <td class="js-ota-booted-firmware-partition">[/{ota.booted_firmware_partition}/]</td>
+                  <tr>
+                  </tr>
+                    <td>Version:</td>
+                    <td class="js-ota-booted-firmware-version">[/{ota.booted_firmware_version}/]</td>
+                  </tr>
+                </tbody>
+              </table>
+              <form class="js-activate-booted-form mb-2">
+                <button type="submit" class="btn btn-primary">Set active</button>
+              </form>
+            </div>
+          </div>
+        </div>
+        <div class="col d-flex align-items-stretch">
+          <div class="card mb-3 w-100">
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title">Active firmware partition</h5>
+              <div>
+		<!--Badges here-->
+              </div>
+              <table class="table table-borderless">
+                <tbody>
+                  <tr>
+                    <td>Partition:</td>
+                    <td class="js-ota-active-firmware-partition">[/{ota.active_firmware_partition}/]</td>
+                  <tr>
+                </tbody>
+              </table>
+              <form class="js-reboot-form mb-2">
+                <button type="submit" class="btn btn-primary">Reboot</button>
+              </form>
+            </div>
+          </div>
+        </div>
+        <div class="col d-flex align-items-stretch">
+          <div class="card mb-3 w-100">
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title">Standby firmware partition</h5>
+              <div>
+		<!--Badges here-->
+              </div>
+              <table class="table table-borderless">
+                <tbody>
+                  <tr>
+                    <td>Partition:</td>
+                    <td class="js-ota-standby-firmware-partition">[/{ota.standby_firmware_partition}/]</td>
+                  </tr>
+                </tbody>
+              </table>
+              <form class="js-activate-standby-form mb-2">
+                <button type="submit" class="btn btn-primary">Set active</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col d-flex align-items-stretch">
+          <div class="card mb-3 w-100">
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title">OTA Firmware upload</h5>
+              <form class="js-upload-ota-form my-2">
+                <label for="otafile" class="form-label">Select ota firmware file</label>
+                <input class="form-control js-upload-ota-file mb-2" type="file" id="otafile">
+                <button type="submit" class="btn btn-primary mt-2">Upload OTA firmware</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

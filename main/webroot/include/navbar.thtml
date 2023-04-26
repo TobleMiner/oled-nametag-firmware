@@ -1,0 +1,35 @@
+    <svg xmlns="http://www.w3.org/2000/svg" style="position:absolute; width: 0; height: 0;">
+      <symbol id="rainbow-heart" viewBox="0 0 180 180">
+        <clipPath id="heart"><path d="m90,180-82-108a42 42 0 1,1 80-47a42,42 0 1,1 80,47"/></clipPath>
+        <g clip-path="url(#heart)">
+          <path fill="#750787" d="m0,0h180v180H0"/>
+          <path fill="#004dff" d="m0,0h180v150H0"/>
+          <path fill="#008026" d="m0,0h180v120H0"/>
+          <path fill="#ffed00" d="m0,0h180v90H0"/>
+          <path fill="#ff8c00" d="m0,0h180v60H0"/>
+          <path fill="#e40303" d="m0,0h180v30H0"/>
+        </g>
+      </symbol>
+    </svg>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="#">
+          <svg class="img-fluid bi flex-shrink-0 me-2" width="24px" height="24px" role="img" aria-label="Miau :3"><use xlink:href="#rainbow-heart"/></svg>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <li class="nav-item">
+              <a class="nav-link[/{navbar.active,match=led}/]" href="/led.thtml">LEDs</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link[/{navbar.active,match=ota}/]" href="/ota.thtml">OTA</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link[/{navbar.active,match=animation}/]" href="/animation.thtml">Animation</a>
+            </li>
+          </div>
+      </div>
+    </nav>

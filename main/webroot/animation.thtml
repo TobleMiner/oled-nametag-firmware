@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    [/{include,file=include/resources.html}/]
+    <title>Animation</title>
+    <script src="/js/animation.js" type="text/javascript"></script>
+  </head>
+  <body>
+    [/{include,file=include/navbar.thtml,page=animation}/]
+    <div class="position-fixed top-0 end-0 mt-2 me-2 js-toasts" style="z-index: 11">
+    </div>
+    <div class="modal fade js-modal-upload" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="staticBackdropLabel">Uploading animation</h5>
+          </div>
+          <div class="modal-body">
+            <div class="progress">
+              <div class="progress-bar progress-bar-striped js-upload-progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="container mt-2">
+      <div class="row">
+        <div class="col d-flex align-items-stretch">
+          <div class="card mb-3 w-100">
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title">Animation upload</h5>
+              <form class="js-upload-animation-form my-2">
+                <label for="animationfile" class="form-label">Select animation file</label>
+                <input class="form-control js-upload-animation-file mb-2" type="file" id="animationfile">
+                <button type="submit" class="btn btn-primary mt-2">Upload animation</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col d-flex align-items-stretch">
+          <div class="card mb-3 w-100">
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title mb-2">Available animations</h5>
+              <div class="list-group js-animations">
+                <div class="list-group-item js-animations-loading list-group-item-light">Loading...</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

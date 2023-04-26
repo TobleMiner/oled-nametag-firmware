@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    [/{include,file=include/resources.html}/]
+    <title>V4 LED controller</title>
+    <script src="/js/led.js" type="text/javascript"></script>
+  </head>
+  <body>
+    [/{include,file=include/navbar.thtml,page=led}/]
+    <div class="container mt-2">
+      <div class="row">
+        <div class="col d-flex align-items-stretch">
+          <div class="card mb-3 w-100">
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title">Settings</h5>
+              <h6 class="card-subtitle mb-2 text-muted">Preserved across reboots</h6>
+              <div class="form-check form-switch mb-3 mt-2">
+                <input class="form-check-input js-input-display-pattern" type="checkbox" id="display-pattern-switch" [/{led.enabled}/]>
+                <label class="form-check-label" for="display-pattern-switch">Enable LEDs</label>
+              </div>
+              <div class="form-check form-switch mb-3">
+                <input class="form-check-input js-input-disable-update" type="checkbox" id="disable-update-switch" [/{led.update_disabled}/]>
+                <label class="form-check-label" for="disable-update-switch">Disable LED updating</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

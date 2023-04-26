@@ -1,0 +1,6 @@
+[submodule "esp-idf"]
+	path = esp-idf
+	url = https://github.com/espressif/esp-idf
+[submodule "components/esp-idf-pixelflut-component"]
+	path = components/esp-idf-pixelflut-component
+	url = https://github.com/TobleMiner/esp-idf-pixelflut-component
