@@ -16,6 +16,7 @@
 #include "flash.h"
 #include "gifplayer.h"
 #include "pixelflut/pixelflut.h"
+#include "settings.h"
 #include "webserver.h"
 
 #define GPIO_SPI_MOSI	11
@@ -25,6 +26,8 @@
 #define GPIO_OLED_CS	46
 
 #define SPI_OLED_HOST	SPI2_HOST
+
+static const char *TAG = "main";
 
 void oled_spi_pre_transfer_cb(spi_transaction_t *t)
 {
@@ -124,7 +127,7 @@ const uint8_t image2[] =
 void wifi_main(void);
 
 static pixelflut_t pixelflut;
-static uint8_t oled_fb[8192];
+static uint8_t oled_fb[8192] = { 0 };
 static uint8_t rgb888_fb[256 * 64 * 3];
 
 static inline unsigned int rgb_to_grayscale(const uint8_t *rgb) {
@@ -183,6 +186,9 @@ void app_main(void)
 	// Initialize LCD
 	oled_init(spidev);
 
+	// Setup settings in NVS
+	settings_init();
+
 	// Mount main fat storage
 	ESP_ERROR_CHECK(flash_fatfs_mount("flash", "/flash"));
 
@@ -203,6 +209,15 @@ void app_main(void)
 	// Start listening
 	ESP_ERROR_CHECK(pixelflut_listen(&pixelflut));
 
+	// Clear screen buffer
+	oled_write_image(spidev, oled_fb, 0);
+	oled_write_image(spidev, oled_fb, 1);
+
+	// Load default animation
+	char *current_default_animation = settings_get_default_animation();
+	ESP_LOGI(TAG, "Default animation: %s", STR_NULL(current_default_animation));
+	gifplayer_set_animation_(current_default_animation);
+
 	int64_t last = esp_timer_get_time();
 	uint32_t flips = 0;
 	bool slot = false;
@@ -216,6 +231,15 @@ void app_main(void)
 			oled_show_image(spidev, slot ? 1 : 0);
 			slot = !slot;
 			gifplayer_render_next_frame_(rgb888_fb, 256, 64, &frame_duration_ms);
+			const char *current_animation = gifplayer_get_path_of_playing_animation_();
+			if (!current_default_animation || strcmp(current_default_animation, current_animation)) {
+				if (current_default_animation) {
+					free(current_default_animation);
+				}
+				settings_set_default_animation(current_animation);
+				current_default_animation = strdup(current_animation);
+				ESP_LOGI(TAG, "Saved default animation: %s", STR_NULL(current_default_animation));
+			}
 			gifplayer_unlock();
 			fb_convert(oled_fb, rgb888_fb);
 			oled_write_image(spidev, oled_fb, slot ? 1 : 0);

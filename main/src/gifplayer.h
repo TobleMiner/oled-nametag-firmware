@@ -17,7 +17,7 @@ void gifplayer_stop_playback(void);
 
 /* Use only with player lock acquired */
 int gifplayer_set_animation_(const char *path);
-void gifplayer_render_next_frame_(void *dst_rgb888, unsigned int width, unsigned int height, int *duration_ms);
+int gifplayer_render_next_frame_(void *dst_rgb888, unsigned int width, unsigned int height, int *duration_ms);
 
 /* Use method and result only with player lock acquired */
 const char *gifplayer_get_path_of_playing_animation_(void);

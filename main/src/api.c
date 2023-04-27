@@ -97,12 +97,9 @@ static esp_err_t http_post_upload_animation(struct httpd_request_ctx* ctx, void*
 	fclose(fhndl);
 
 	if (animation_switch_required) {
-		if (gifplayer_set_animation_(abspath)) {
-			free(abspath);
-		}
-	} else {
-		free(abspath);
+		gifplayer_set_animation_(abspath);
 	}
+	free(abspath);
 
 	gifplayer_unlock();
 	httpd_resp_send_chunk(req, "{}", strlen("{}"));

@@ -64,6 +64,7 @@ static void draw_gif_frame(GIFDRAW *draw) {
 
 int gifplayer_set_animation_(const char *path) {
 	if (current_animation_path) {
+		GIF_close(&current_animation);
 		free(current_animation_path);
 		current_animation_path = NULL;
 	}
@@ -78,7 +79,7 @@ int gifplayer_set_animation_(const char *path) {
 		if (!GIF_openFile(&current_animation, path, draw_gif_frame)) {
 			free(current_animation_path);
 			current_animation_path = NULL;
-			return current_animation.iError;
+			return current_animation.iError ? current_animation.iError : -1;
 		}
 	}
 
@@ -99,13 +100,13 @@ void gifplayer_stop_playback(void) {
 	gifplayer_set_animation(NULL);
 }
 
-void gifplayer_render_next_frame_(void *dst_rgb888, unsigned int width, unsigned int height, int *duration_ms) {
+int gifplayer_render_next_frame_(void *dst_rgb888, unsigned int width, unsigned int height, int *duration_ms) {
 	frame_draw_ctx_t ctx = {
 		.width = width,
 		.height = height,
 		.dst_rgb888 = dst_rgb888
 	};
-	GIF_playFrame(&current_animation, duration_ms, &ctx);
+	return GIF_playFrame(&current_animation, duration_ms, &ctx);
 }
 
 const char *gifplayer_get_path_of_playing_animation_(void) {
