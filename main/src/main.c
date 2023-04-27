@@ -68,7 +68,8 @@ void oled_init(spi_device_handle_t spidev)
 	OLED_CMD(0xFD, 0x12);		// Unlock IC for writing
 	OLED_CMD(0xAE);			// Sleep mode on
 //	OLED_CMD(0xB3, 0xBF);		// Set clock divider
-	OLED_CMD(0xB3, 0x91);		// Set clock divider
+//	OLED_CMD(0xB3, 0x91);		// Set clock divider
+	OLED_CMD(0xB3, 0xA1);		// Set clock divider
 	OLED_CMD(0xCA, 0x3F);		// Set multiplexing ratio (1/64)
 	OLED_CMD(0xA2, 0x00);		// Zero out display offset
 	OLED_CMD(0xA1, 0x00);		// Zero out starting line
@@ -79,6 +80,7 @@ void oled_init(spi_device_handle_t spidev)
 	OLED_CMD(0xB4, 0xA0, 0xFD);	// Use internal VSL, Enhanced display quality
 //	OLED_CMD(0xC1, 0xFF);		// Maximum contrast
 	OLED_CMD(0xC1, 0x9F);		// Maximum contrast
+//	OLED_CMD(0xC1, 0x22);		// Maximum contrast
 	OLED_CMD(0xC7, 0x0F);		// Maximum drive current
 	OLED_CMD(0xB9);			// Enable grayscale mode
 	OLED_CMD(0xB1, 0xE2);		// Phase length, phase1 = 5 DCLK, phase2 = 14 DCLK
