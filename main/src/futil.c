@@ -19,8 +19,15 @@ void futil_normalize_path(char* path) {
 }
 
 const char* futil_relpath(const char* path, const char* basepath) {
-  size_t base_len = strlen(basepath);
-  size_t path_len = strlen(path);
+  size_t base_len;
+  size_t path_len;
+
+  if (!path || !basepath) {
+    return NULL;
+  }
+
+  path_len = strlen(path);
+  base_len = strlen(basepath);
 
   if(base_len > path_len) {
     return NULL;
@@ -60,7 +67,7 @@ int futil_dir_exists(const char *path) {
         closedir(dir);
         return 0;
     }
-    return -errno;
+    return errno ? -errno : -1;
 }
 
 char* futil_path_concat(const char* path, const char* basepath) {
@@ -80,17 +87,22 @@ char* futil_path_concat(const char* path, const char* basepath) {
 }
 
 char *futil_abspath(char *path, const char *basepath) {
-    if (!futil_is_path_relative(path)) {
-        return path;
-    }
-    return futil_path_concat(path, basepath);
+  if (!path) {
+    return NULL;
+  }
+
+  if (!futil_is_path_relative(path) || !basepath) {
+    return path;
+  }
+  return futil_path_concat(path, basepath);
 }
 
 static char* futil_get_fext_limit(char* path, char* limit) {
+  char* fext_ptr = limit;
   if(limit < path) {
     return NULL;
   }
-  char* fext_ptr = limit;
+
   while(fext_ptr-- > path) {
     if(*fext_ptr == '.') {
       return fext_ptr + 1;
@@ -100,6 +112,10 @@ static char* futil_get_fext_limit(char* path, char* limit) {
 }
 
 char* futil_get_fext(char* path) {
+  if (!path) {
+    return NULL;
+  }
+
   return futil_get_fext_limit(path, path + strlen(path));
 }
 
@@ -164,8 +180,15 @@ fail:
 }
 
 const char* futil_fname(const char* path) {
-  size_t len = strlen(path);
-  char* slash_ptr = strrchr(path, '/');
+  size_t len;
+  char* slash_ptr;
+
+  if (!path) {
+    return NULL;
+  }
+
+  len = strlen(path);
+  slash_ptr = strrchr(path, '/');
 
   if (!slash_ptr) {
 	return path + len;
