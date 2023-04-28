@@ -35,6 +35,7 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 #define DIV_ROUND_UP(u, v) (((u) + ((v) - 1)) / (v))
+#define DIV_ROUND(u, v) (((u) + ((v) / 2)) / (v))
 
 #define BITSWAP_U8(x) \
 	((((x) & 0x80) >> 7) | \
