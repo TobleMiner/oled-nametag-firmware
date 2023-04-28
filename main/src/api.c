@@ -104,7 +104,7 @@ static esp_err_t http_post_upload_animation(struct httpd_request_ctx* ctx, void*
 
 	if (err) {
 		ESP_LOGE(TAG, "Failed to update available animations after upload: %d", err);
-		httpd_send_error_msg(ctx, HTTPD_500, HTTP_ANIMATION_WRITE_ERR);
+		httpd_send_error_msg(ctx, HTTPD_500, HTTP_DIRCACHE_UPDATE_ERR);
 	} else {
 		httpd_resp_send_chunk(req, "{}", strlen("{}"));
 		httpd_finalize_response(ctx);
