@@ -13,6 +13,7 @@
 #include "esp_timer.h"
 
 #include "api.h"
+#include "buttons.h"
 #include "flash.h"
 #include "gifplayer.h"
 #include "pixelflut/pixelflut.h"
@@ -154,6 +155,24 @@ static void fb_convert(uint8_t *grayscale, const uint8_t *rgb888) {
 	}
 }
 
+static button_event_handler_t gifplayer_button_event_handler;
+static bool handle_gifplayer_button_press(const button_event_t *event, void *priv) {
+	ESP_LOGI(TAG, "Button %s pressed", button_to_name(event->button));
+	if (event->button == BUTTON_UP) {
+		gifplayer_play_prev_animation();
+	} else if (event->button == BUTTON_DOWN) {
+		gifplayer_play_next_animation();
+        }
+	return false;
+}
+
+static button_event_handler_t reset_button_event_handler;
+static bool handle_reset_button_press(const button_event_t *event, void *priv) {
+	ESP_LOGI(TAG, "Reset button pressed");
+//	esp_restart();
+	return false;
+}
+
 void app_main(void)
 {
 	esp_err_t ret;
@@ -199,6 +218,30 @@ void app_main(void)
 
 	// Setup gifplayer
 	gifplayer_init();
+
+	// Setup buttons
+	buttons_init();
+	const button_event_handler_multi_user_cfg_t button_cfg = {
+		.base = {
+			.cb = handle_gifplayer_button_press,
+		},
+		.multi = {
+			.button_filter = (1 << BUTTON_UP) | (1 << BUTTON_DOWN),
+			.action_filter = (1 << BUTTON_ACTION_RELEASE)
+		}
+	};
+	const button_event_handler_single_user_cfg_t reset_button_cfg = {
+		.base = {
+			.cb = handle_reset_button_press,
+		},
+		.single = {
+			.button = BUTTON_EXIT,
+			.action = BUTTON_ACTION_HOLD,
+			.min_hold_duration_ms = 1000,
+		}
+	};
+	buttons_register_multi_button_event_handler(&gifplayer_button_event_handler, &button_cfg);
+	buttons_register_single_button_event_handler(&reset_button_event_handler, &reset_button_cfg);
 
 	// Setup webserver
 	httpd_t *httpd = webserver_preinit();
