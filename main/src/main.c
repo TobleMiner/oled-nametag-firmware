@@ -14,8 +14,10 @@
 
 #include "api.h"
 #include "buttons.h"
+#include "embedded_files.h"
 #include "flash.h"
 #include "gifplayer.h"
+#include "gui.h"
 #include "pixelflut/pixelflut.h"
 #include "settings.h"
 #include "webserver.h"
@@ -132,6 +134,7 @@ void wifi_main(void);
 static pixelflut_t pixelflut;
 static uint8_t oled_fb[8192] = { 0 };
 static uint8_t rgb888_fb[256 * 64 * 3];
+static uint8_t gui_render_fb[256 * 64];
 
 static inline unsigned int rgb_to_grayscale(const uint8_t *rgb) {
 	return (rgb[0] + rgb[1] + rgb[2]) / 3;
@@ -155,14 +158,31 @@ static void fb_convert(uint8_t *grayscale, const uint8_t *rgb888) {
 	}
 }
 
+static void fb_convert_grayscale(uint8_t *stuffed_4bit, const uint8_t *grayscale) {
+	for (int y = 0; y < 64; y++) {
+		for (int x = 0; x < 256 / 2; x++) {
+			unsigned int int1 = grayscale[y * 256 + x * 2 + 1];
+			unsigned int int2 = grayscale[y * 256 + x * 2 + 0];
+			stuffed_4bit[y * 128 + x] = (int1 >> 4) | (int2 & 0xf0);
+		}
+	}
+}
+
+gui_t gui;
+
 static button_event_handler_t gifplayer_button_event_handler;
 static bool handle_gifplayer_button_press(const button_event_t *event, void *priv) {
 	ESP_LOGI(TAG, "Button %s pressed", button_to_name(event->button));
+	gui_lock(&gui);
+	gui_process_button_event(&gui, event);
+	gui_unlock(&gui);
+/*
 	if (event->button == BUTTON_UP) {
 		gifplayer_play_prev_animation();
 	} else if (event->button == BUTTON_DOWN) {
 		gifplayer_play_next_animation();
         }
+*/
 	return false;
 }
 
@@ -172,6 +192,22 @@ static bool handle_reset_button_press(const button_event_t *event, void *priv) {
 //	esp_restart();
 	return false;
 }
+
+gui_list_t gui_list_settings;
+gui_image_t gui_image_gif_player;
+gui_image_t gui_image_wlan_settings;
+gui_image_t gui_image_power_off;
+
+TaskHandle_t main_task;
+
+static void gui_request_render(const gui_t *gui) {
+	ESP_LOGI(TAG, "Rendering requested");
+	xTaskNotifyGive(main_task);
+}
+
+const gui_ops_t gui_ops = {
+	.request_render = gui_request_render
+};
 
 void app_main(void)
 {
@@ -193,6 +229,8 @@ void app_main(void)
 		.queue_size = 2,			// We want to be able to queue 7 transactions at a time
 		.pre_cb = oled_spi_pre_transfer_cb	// Specify pre-transfer callback to handle D/~C line
 	};
+
+	main_task = xTaskGetCurrentTaskHandle();
 
 	// Setup GPIOs
 	gpio_set_direction(GPIO_OLED_DC, GPIO_MODE_OUTPUT);
@@ -218,6 +256,31 @@ void app_main(void)
 
 	// Setup gifplayer
 	gifplayer_init();
+
+	// Initialize GUI
+	gui_init(&gui, NULL, &gui_ops);
+	gui_list_init(&gui_list_settings);
+	gui_image_init(&gui_image_gif_player, 119, 21, EMBEDDED_FILE_PTR(gif_player_119x21_raw));
+	gui_image_init(&gui_image_wlan_settings, 119, 20, EMBEDDED_FILE_PTR(wlan_settings_119x20_raw));
+	gui_image_init(&gui_image_power_off, 119, 18, EMBEDDED_FILE_PTR(power_off_119x18_raw));
+
+	gui_element_add_child(&gui.container.element, &gui_list_settings.container.element);
+	gui_element_set_position(&gui_list_settings.container.element, 14, 0);
+	gui_element_set_size(&gui_list_settings.container.element, 144, 64);
+
+	gui_element_set_selectable(&gui_image_gif_player.element, true);
+	gui_element_add_child(&gui_list_settings.container.element, &gui_image_gif_player.element);
+	gui_element_set_position(&gui_image_gif_player.element, 0, 2);
+
+	gui_element_set_selectable(&gui_image_wlan_settings.element, true);
+	gui_element_add_child(&gui_list_settings.container.element, &gui_image_wlan_settings.element);
+	gui_element_set_position(&gui_image_wlan_settings.element, 0, 23);
+
+	gui_element_set_selectable(&gui_image_power_off.element, true);
+	gui_element_add_child(&gui_list_settings.container.element, &gui_image_power_off.element);
+	gui_element_set_position(&gui_image_power_off.element, 0, 43);
+
+	gui_element_show(&gui_list_settings.container.element);
 
 	// Setup buttons
 	buttons_init();
@@ -268,6 +331,20 @@ void app_main(void)
 	bool slot = false;
 	int last_frame_duration_ms = 0;
 	while (1) {
+		const gui_point_t render_size = {
+			256,
+			64
+		};
+		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+		gui_lock(&gui);
+		gui_render(&gui, gui_render_fb, 256, &render_size);
+		gui_unlock(&gui);
+		ESP_LOGI(TAG, "GUI render complete");
+		fb_convert_grayscale(oled_fb, gui_render_fb);
+		slot = !slot;
+		oled_write_image(spidev, oled_fb, slot ? 1 : 0);
+		oled_show_image(spidev, slot ? 1 : 0);
+/*
 		gifplayer_lock();
 		if (gifplayer_is_animation_playing()) {
 			int frame_duration_ms;
@@ -308,6 +385,7 @@ void app_main(void)
 			gifplayer_unlock();
 			vTaskDelay(5);
 		}
+*/
 /*
 		for (int i = 0; i < 2; i++) {
 			for (int y = 0; y < 64; y++) {

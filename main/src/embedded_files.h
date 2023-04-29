@@ -4,8 +4,14 @@
 
 #define STR(s) #s
 
+#define EMBEDDED_FILE_PTR(name_) \
+	binary_ ## name_ ## _start
+
+#define EMBEDDED_FILE_PTR_END(name_) \
+	binary_ ## name_ ## _end
+
 #define EMBEDDED_FILE_PTRS(name_) \
-	binary_ ## name_ ## _start, binary_ ## name_ ## _end
+	EMBEDDED_FILE_PTR(name_), EMBEDDED_FILE_PTR_END(name_)
 
 #define DECLARE_EMBEDDED_FILE(name_) \
 	extern const uint8_t binary_ ## name_ ## _start[] asm("_binary_"STR(name_)"_start"); \
@@ -22,3 +28,7 @@ DECLARE_EMBEDDED_FILE(navbar_thtml);
 DECLARE_EMBEDDED_FILE(ota_js);
 DECLARE_EMBEDDED_FILE(ota_thtml);
 DECLARE_EMBEDDED_FILE(resources_html);
+
+DECLARE_EMBEDDED_FILE(gif_player_119x21_raw);
+DECLARE_EMBEDDED_FILE(wlan_settings_119x20_raw);
+DECLARE_EMBEDDED_FILE(power_off_119x18_raw);
