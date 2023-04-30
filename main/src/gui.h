@@ -74,6 +74,13 @@ typedef struct gui_image {
 	const uint8_t *image_data_start;
 } gui_image_t;
 
+typedef struct gui_rectangle {
+	gui_element_t element;
+
+	bool filled;
+	gui_pixel_t color;
+} gui_rectangle_t;
+
 typedef struct gui gui_t;
 
 typedef struct gui_ops {
@@ -133,3 +140,8 @@ gui_element_t *gui_image_init(gui_image_t *image, unsigned int width, unsigned i
 
 // GUI list widget API
 gui_element_t *gui_list_init(gui_list_t *list);
+
+// GUI rectangle widget API
+gui_element_t *gui_rectangle_init(gui_rectangle_t *rectangle);
+void gui_rectangle_set_filled(gui_rectangle_t *rectangle, bool filled);
+void gui_rectangle_set_color(gui_rectangle_t *rectangle, gui_pixel_t color);

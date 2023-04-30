@@ -518,6 +518,67 @@ void gui_element_remove_event_handler(gui_event_handler_t *handler) {
 	LIST_DELETE(&handler->list);
 }
 
+static void gui_rectangle_render(gui_element_t *element, const gui_point_t *source_offset, const gui_fb_t *fb, const gui_point_t *destination_size) {
+	gui_rectangle_t *rect = container_of(element, gui_rectangle_t, element);
+	int width = MIN(element->area.size.x - source_offset->x, destination_size->x);
+	int height = MIN(element->area.size.y - source_offset->y, destination_size->y);
+
+	ESP_LOGI(TAG, "Rendering rectangle from [%d, %d] to [%d, %d]...", source_offset->x, source_offset->y, destination_size->x, destination_size->y);
+
+	if (rect->filled) {
+		gui_point_t fill_size = {
+			width,
+			height
+		};
+
+		gui_fb_memset(fb, rect->color, &fill_size);
+	} else {
+		unsigned int max_y = element->area.size.y - source_offset->y;
+		unsigned int max_x = element->area.size.x - source_offset->x;
+
+		if (source_offset->y == 0) {
+			unsigned int x;
+
+			for (x = 0; x < width; x++) {
+				fb->pixels[x] = rect->color;
+			}
+		}
+
+		if (destination_size->y >= max_y) {
+			unsigned int x;
+
+			for (x = 0; x < width; x++) {
+				fb->pixels[(max_y - 1) * fb->stride + x] = rect->color;
+			}
+		}
+
+		if (source_offset->x == 0) {
+			unsigned int y;
+
+			for (y = 0; y < height; y++) {
+				fb->pixels[y * fb->stride] = rect->color;
+			}
+		}
+
+		if (destination_size->x >= max_x) {
+			unsigned int y;
+
+			for (y = 0; y < height; y++) {
+				fb->pixels[y * fb->stride + max_x - 1] = rect->color;
+			}
+		}
+	}
+}
+
+static const gui_element_ops_t gui_rectangle_ops = {
+	.render = gui_rectangle_render,
+};
+
+gui_element_t *gui_rectangle_init(gui_rectangle_t *rectangle) {
+	gui_element_init(&rectangle->element, &gui_rectangle_ops);
+	return &rectangle->element;
+}
+
 // User API functions that might require rerendering
 void gui_element_set_position(gui_element_t *elem, unsigned int x, unsigned int y) {
 	elem->area.position.x = x;
@@ -576,4 +637,16 @@ bool gui_process_button_event(gui_t *gui, const button_event_t *event) {
 	gui_element_check_render(&gui->container.element);
 
 	return stop_propagation;
+}
+
+void gui_rectangle_set_filled(gui_rectangle_t *rectangle, bool filled) {
+	rectangle->filled = filled;
+	gui_element_invalidate(&rectangle->element);
+	gui_element_check_render(&rectangle->element);
+}
+
+void gui_rectangle_set_color(gui_rectangle_t *rectangle, gui_pixel_t color) {
+	rectangle->color = color;
+	gui_element_invalidate(&rectangle->element);
+	gui_element_check_render(&rectangle->element);
 }
