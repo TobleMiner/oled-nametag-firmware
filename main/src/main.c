@@ -197,6 +197,9 @@ gui_list_t gui_list_settings;
 gui_image_t gui_image_gif_player;
 gui_image_t gui_image_wlan_settings;
 gui_image_t gui_image_power_off;
+gui_event_handler_t gui_image_gif_player_on_click_handler;
+gui_event_handler_t gui_image_wlan_settings_on_click_handler;
+gui_event_handler_t gui_image_power_off_on_click_handler;
 
 TaskHandle_t main_task;
 
@@ -208,6 +211,12 @@ static void gui_request_render(const gui_t *gui) {
 const gui_ops_t gui_ops = {
 	.request_render = gui_request_render
 };
+
+bool on_image_click(const gui_event_t *event, gui_element_t *elem) {
+	ESP_LOGI(TAG, "hiding %p", elem);
+	gui_element_set_hidden(elem, true);
+	return false;
+}
 
 void app_main(void)
 {
@@ -258,6 +267,11 @@ void app_main(void)
 	gifplayer_init();
 
 	// Initialize GUI
+	ESP_LOGI(TAG, "&gui_list_settings=%p", &gui_list_settings.container.element);
+	ESP_LOGI(TAG, "&gui_image_gif_player=%p", &gui_image_gif_player.element);
+	ESP_LOGI(TAG, "&gui_image_wlan_settings=%p", &gui_image_wlan_settings.element);
+	ESP_LOGI(TAG, "&gui_image_power_off=%p", &gui_image_power_off.element);
+
 	gui_init(&gui, NULL, &gui_ops);
 	gui_list_init(&gui_list_settings);
 	gui_image_init(&gui_image_gif_player, 119, 21, EMBEDDED_FILE_PTR(gif_player_119x21_raw));
@@ -271,14 +285,21 @@ void app_main(void)
 	gui_element_set_selectable(&gui_image_gif_player.element, true);
 	gui_element_add_child(&gui_list_settings.container.element, &gui_image_gif_player.element);
 	gui_element_set_position(&gui_image_gif_player.element, 0, 2);
+	gui_event_handler_cfg_t event_handler_cfg = {
+		.event = GUI_EVENT_CLICK,
+		.cb = on_image_click,
+	};
+	gui_element_add_event_handler(&gui_image_gif_player.element, &gui_image_gif_player_on_click_handler, &event_handler_cfg);
 
 	gui_element_set_selectable(&gui_image_wlan_settings.element, true);
 	gui_element_add_child(&gui_list_settings.container.element, &gui_image_wlan_settings.element);
 	gui_element_set_position(&gui_image_wlan_settings.element, 0, 23);
+	gui_element_add_event_handler(&gui_image_wlan_settings.element, &gui_image_wlan_settings_on_click_handler, &event_handler_cfg);
 
 	gui_element_set_selectable(&gui_image_power_off.element, true);
 	gui_element_add_child(&gui_list_settings.container.element, &gui_image_power_off.element);
 	gui_element_set_position(&gui_image_power_off.element, 0, 43);
+	gui_element_add_event_handler(&gui_image_power_off.element, &gui_image_power_off_on_click_handler, &event_handler_cfg);
 
 	gui_element_show(&gui_list_settings.container.element);
 
@@ -289,7 +310,7 @@ void app_main(void)
 			.cb = handle_gifplayer_button_press,
 		},
 		.multi = {
-			.button_filter = (1 << BUTTON_UP) | (1 << BUTTON_DOWN),
+			.button_filter = (1 << BUTTON_UP) | (1 << BUTTON_DOWN) | (1 << BUTTON_ENTER),
 			.action_filter = (1 << BUTTON_ACTION_RELEASE)
 		}
 	};
@@ -330,6 +351,8 @@ void app_main(void)
 	uint32_t flips = 0;
 	bool slot = false;
 	int last_frame_duration_ms = 0;
+	uint32_t cnt = 0;
+	bool hidden = false;
 	while (1) {
 		const gui_point_t render_size = {
 			256,
@@ -344,6 +367,17 @@ void app_main(void)
 		slot = !slot;
 		oled_write_image(spidev, oled_fb, slot ? 1 : 0);
 		oled_show_image(spidev, slot ? 1 : 0);
+/*
+		vTaskDelay(10);
+		cnt++;
+
+		if (cnt % 10 == 0) {
+			hidden = !hidden;
+			gui_lock(&gui);
+			gui_element_set_hidden(&gui_list_settings.container.element, hidden);
+			gui_unlock(&gui);
+		}
+*/
 /*
 		gifplayer_lock();
 		if (gifplayer_is_animation_playing()) {

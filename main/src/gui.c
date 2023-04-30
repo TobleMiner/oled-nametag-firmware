@@ -10,6 +10,7 @@ static const char *TAG = "gui";
 
 static void gui_element_init(gui_element_t *elem) {
 	INIT_LIST_HEAD(elem->list);
+	INIT_LIST_HEAD(elem->event_handlers);
 	elem->parent = NULL;
 	elem->inverted = false;
 }
@@ -74,6 +75,20 @@ static void gui_element_set_shown(gui_element_t *element, bool shown) {
 	gui_element_invalidate_ignore_hidden_shown(element);
 }
 
+static bool gui_element_dispatch_event(gui_element_t *element, gui_event_t event) {
+	gui_event_handler_t *cursor;
+
+	LIST_FOR_EACH_ENTRY(cursor, &element->event_handlers, list) {
+		if (cursor->cfg.event == event) {
+			if (cursor->cfg.cb(cursor, element)) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 static void gui_container_render(gui_element_t *element, const gui_point_t *source_offset, const gui_fb_t *fb, const gui_point_t *destination_size) {
 	gui_container_t *container = container_of(element, gui_container_t, element);
 	gui_point_t pos;
@@ -115,28 +130,6 @@ static void gui_container_render(gui_element_t *element, const gui_point_t *sour
 	}
 }
 
-static void gui_container_display(gui_element_t *element) {
-	gui_container_t *container = container_of(element, gui_container_t, element);
-
-	gui_element_t *cursor;
-	LIST_FOR_EACH_ENTRY(cursor, &container->children, list) {
-		if (cursor->ops->display) {
-			cursor->ops->display(element);
-		}
-	}
-}
-
-static void gui_container_remove(gui_element_t *element) {
-	gui_container_t *container = container_of(element, gui_container_t, element);
-
-	gui_element_t *cursor;
-	LIST_FOR_EACH_ENTRY(cursor, &container->children, list) {
-		if (cursor->ops->remove) {
-			cursor->ops->remove(element);
-		}
-	}
-}
-
 static bool gui_container_process_button_event(gui_element_t *element, const button_event_t *event, bool *stop_propagation) {
 	gui_container_t *container = container_of(element, gui_container_t, element);
 
@@ -163,10 +156,6 @@ static void gui_container_update_shown(gui_element_t *element) {
 
 static const gui_element_ops_t gui_container_ops = {
 	.render = gui_container_render,
-	.display = gui_container_display,
-	.remove = gui_container_remove,
-	.invalidate = NULL,
-	.add_child = NULL,
 	.update_shown = gui_container_update_shown,
 	.process_button_event = gui_container_process_button_event,
 };
@@ -182,15 +171,6 @@ static void gui_element_set_size_(gui_element_t *elem, unsigned int width, unsig
 	elem->area.size.x = width;
 	elem->area.size.y = height;
 	gui_element_invalidate(elem);
-}
-
-static void gui_list_add_child(gui_element_t *elem, gui_element_t *child) {
-	gui_list_t *list = container_of(elem, gui_list_t, container.element);
-
-	if (!list->selected_entry && child->selectable) {
-		list->selected_entry = child;
-		gui_element_invalidate(&list->container.element);
-	}
 }
 
 static void gui_fb_invert_area(const gui_fb_t *fb, const gui_area_t *area) {
@@ -296,6 +276,29 @@ static bool gui_list_scroll_up_down(gui_list_t *list, gui_list_search_direction_
 	return false;
 }
 
+static bool gui_list_is_selected_entry_valid(gui_list_t *list) {
+	gui_element_t *cursor;
+
+	if (list->selected_entry) {
+		bool selected_entry_in_list = false;
+
+		LIST_FOR_EACH_ENTRY(cursor, &list->container.children, list) {
+			if (cursor == list->selected_entry) {
+				selected_entry_in_list = true;
+				break;
+			}
+		}
+
+		if (selected_entry_in_list) {
+			return list->selected_entry->shown &&
+			       !list->selected_entry->hidden &&
+			       list->selected_entry->selectable;
+		}
+	}
+
+	return false;
+}
+
 static bool gui_list_process_button_event(gui_element_t *elem, const button_event_t *event, bool *stop_propagation) {
 	gui_list_t *list = container_of(elem, gui_list_t, container.element);
 
@@ -308,51 +311,41 @@ static bool gui_list_process_button_event(gui_element_t *elem, const button_even
 		return true;
 	}
 
+	if (gui_list_is_selected_entry_valid(list) &&
+	    event->button == BUTTON_ENTER) {
+		if (gui_element_dispatch_event(list->selected_entry, GUI_EVENT_CLICK)) {
+			*stop_propagation = true;
+			return true;
+		}
+	}
+
 	return false;
 }
 
 static void gui_list_update_selection(gui_list_t *list) {
-	bool selected_entry_in_list = false;
-	bool selected_entry_valid;
-	gui_element_t *cursor;
+	if (!gui_list_is_selected_entry_valid(list)) {
+		gui_element_t *new_selected_entry = gui_list_find_next_selectable_entry(list, &list->container.children, GUI_LIST_SEARCH_DOWN);
 
-	if (list->selected_entry) {
-		LIST_FOR_EACH_ENTRY(cursor, &list->container.children, list) {
-			if (cursor == list->selected_entry) {
-				selected_entry_in_list = true;
-				break;
-			}
+		if (new_selected_entry != list->selected_entry) {
+			list->selected_entry = new_selected_entry;
+			gui_element_invalidate(&list->container.element);
 		}
-	}
-
-	if (selected_entry_in_list) {
-		selected_entry_valid =
-				list->selected_entry->shown &&
-				!list->selected_entry->hidden &&
-				list->selected_entry->selectable;
-	} else {
-		selected_entry_valid = false;
-	}
-
-	if (!selected_entry_valid) {
-		list->selected_entry = gui_list_find_next_selectable_entry(list, &list->container.children, GUI_LIST_SEARCH_DOWN);
 	}
 }
 
-static void gui_list_update_shown(gui_element_t *elem) {
+static void gui_list_invalidate(gui_element_t *elem) {
 	gui_list_t *list = container_of(elem, gui_list_t, container.element);
 
-	gui_container_update_shown(&list->container.element);
 	gui_list_update_selection(list);
+	if (elem->parent) {
+		gui_element_invalidate(elem->parent);
+	}
 }
 
 static const gui_element_ops_t gui_list_ops = {
 	.render = gui_list_render,
-	.display = gui_container_display,
-	.remove = gui_container_remove,
-	.invalidate = NULL,
-	.add_child = gui_list_add_child,
-	.update_shown = gui_list_update_shown,
+	.invalidate = gui_list_invalidate,
+	.update_shown = gui_container_update_shown,
 	.process_button_event = gui_list_process_button_event,
 };
 
@@ -383,10 +376,6 @@ static void gui_image_render(gui_element_t *element, const gui_point_t *source_o
 
 static const gui_element_ops_t gui_image_ops = {
 	.render = gui_image_render,
-	.display = NULL,
-	.remove = NULL,
-	.invalidate = NULL,
-	.add_child = NULL,
 };
 
 gui_element_t *gui_image_init(gui_image_t *image, unsigned int width, unsigned int height, const uint8_t *image_data_start) {
@@ -416,6 +405,7 @@ void gui_render(gui_t *gui, gui_pixel_t *fb, unsigned int stride, const gui_poin
 
 	gui_fb_memset(&gui_fb, GUI_COLOR_BLACK, size);
 	gui_container_render(&gui->container.element, &offset, &gui_fb, size);
+	gui->container.element.dirty = false;
 }
 
 static void gui_check_render(gui_element_t *element) {
@@ -427,12 +417,7 @@ static void gui_check_render(gui_element_t *element) {
 }
 
 static const gui_element_ops_t gui_ops = {
-	.render = NULL,
-	.display = NULL,
-	.remove = NULL,
-	.invalidate = NULL,
 	.check_render = gui_check_render,
-	.add_child = NULL
 };
 
 gui_element_t *gui_init(gui_t *gui, void *priv, const gui_ops_t *ops) {
@@ -452,6 +437,16 @@ void gui_lock(gui_t *gui) {
 
 void gui_unlock(gui_t *gui) {
 	xSemaphoreGive(gui->lock);
+}
+
+void gui_element_add_event_handler(gui_element_t *elem, gui_event_handler_t *handler, const gui_event_handler_cfg_t *cfg) {
+	handler->cfg = *cfg;
+	INIT_LIST_HEAD(handler->list);
+	LIST_APPEND_TAIL(&handler->list, &elem->event_handlers);
+}
+
+void gui_element_remove_event_handler(gui_event_handler_t *handler) {
+	LIST_DELETE(&handler->list);
 }
 
 // User API functions that might require rerendering
@@ -489,9 +484,6 @@ void gui_element_add_child(gui_element_t *parent, gui_element_t *child) {
 
 	child->parent = parent;
 	LIST_APPEND_TAIL(&child->list, &container->children);
-	if (parent->ops->add_child) {
-		parent->ops->add_child(parent, child);
-	}
 	gui_element_check_render(parent);
 }
 

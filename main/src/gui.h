@@ -32,10 +32,7 @@ typedef struct gui_element gui_element_t;
 
 typedef struct gui_element_ops {
 	void (*render)(gui_element_t *element, const gui_point_t *source_offset, const gui_fb_t *fb, const gui_point_t *destination_size);
-	void (*display)(gui_element_t *element);
-	void (*remove)(gui_element_t *element);
 	void (*invalidate)(gui_element_t *element);
-	void (*add_child)(gui_element_t *element, gui_element_t *child);
 	void (*update_shown)(gui_element_t *element);
 	void (*check_render)(gui_element_t *element);
 	bool (*process_button_event)(gui_element_t *element, const button_event_t *event, bool *stop_propagation);
@@ -44,7 +41,7 @@ typedef struct gui_element_ops {
 typedef struct gui_element {
 	// Managed properties
 	struct list_head list;
-	struct list_head events;
+	struct list_head event_handlers;
 	gui_element_t *parent;
 	bool inverted;
 	bool shown;
@@ -91,17 +88,21 @@ struct gui {
 	const gui_ops_t *ops;
 };
 
-typedef struct gui_event gui_event_t;
+typedef struct gui_event_handler gui_event_handler_t;
 
-typedef enum gui_event_type {
+typedef enum gui_event {
 	GUI_EVENT_CLICK
-} gui_event_type_t;
+} gui_event_t;
 
-struct gui_event {
-	struct list_head list;
-	gui_event_type_t type;
+typedef struct gui_event_handler_cfg {
+	gui_event_t event;
 	void *priv;
-	bool (*cb)(gui_event_t *event);
+	bool (*cb)(const gui_event_handler_t *event, gui_element_t *elem);
+} gui_event_handler_cfg_t;
+
+struct gui_event_handler {
+	struct list_head list;
+	gui_event_handler_cfg_t cfg;
 };
 
 // Top level GUI API
@@ -122,6 +123,8 @@ void gui_element_set_hidden(gui_element_t *elem, bool hidden);
 void gui_element_show(gui_element_t *elem);
 void gui_element_add_child(gui_element_t *parent, gui_element_t *child);
 void gui_element_remove_child(gui_element_t *parent, gui_element_t *child);
+void gui_element_add_event_handler(gui_element_t *elem, gui_event_handler_t *handler, const gui_event_handler_cfg_t *cfg);
+void gui_element_remove_event_handler(gui_event_handler_t *handler);
 
 // GUI image widget API
 gui_element_t *gui_image_init(gui_image_t *image, unsigned int width, unsigned int height, const uint8_t *image_data_start);
