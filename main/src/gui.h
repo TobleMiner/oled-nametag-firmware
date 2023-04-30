@@ -43,13 +43,13 @@ typedef struct gui_element {
 	struct list_head list;
 	struct list_head event_handlers;
 	gui_element_t *parent;
-	bool inverted;
 	bool shown;
 	bool dirty;
 
 	// User properties
 	bool selectable;
 	bool hidden;
+	bool inverted;
 	gui_area_t area;
 	const gui_element_ops_t *ops;
 } gui_element_t;
@@ -120,6 +120,7 @@ void gui_element_set_position(gui_element_t *elem, unsigned int x, unsigned int 
 void gui_element_set_size(gui_element_t *elem, unsigned int width, unsigned int height);
 void gui_element_set_selectable(gui_element_t *elem, bool selectable);
 void gui_element_set_hidden(gui_element_t *elem, bool hidden);
+void gui_element_set_inverted(gui_element_t *elem, bool inverted);
 void gui_element_show(gui_element_t *elem);
 void gui_element_add_child(gui_element_t *parent, gui_element_t *child);
 void gui_element_remove_child(gui_element_t *parent, gui_element_t *child);

@@ -60,10 +60,35 @@ static void gui_element_invalidate(gui_element_t *elem) {
 	}
 }
 
+static void gui_fb_invert_area(const gui_fb_t *fb, const gui_area_t *area) {
+	unsigned int x, y;
+
+	for (y = 0; y < area->size.y; y++) {
+		for (x = 0; x < area->size.x; x++) {
+			unsigned int index = y * fb->stride + x;
+
+			fb->pixels[index] = GUI_INVERT_PIXEL(fb->pixels[index]);
+		}
+	}
+}
+
 static void gui_element_render(gui_element_t *elem, const gui_point_t *source_offset, const gui_fb_t *fb, const gui_point_t *destination_size) {
 	if (elem->shown && !elem->hidden && elem->ops->render) {
 		elem->ops->render(elem, source_offset, fb, destination_size);
 	}
+
+	if (elem->inverted) {
+		gui_area_t invert_area = {
+			.position = { 0, 0 },
+			.size = *destination_size
+		};
+
+		invert_area.size.x = MIN(invert_area.size.x, elem->area.size.x);
+		invert_area.size.y = MIN(invert_area.size.y, elem->area.size.y);
+
+		gui_fb_invert_area(fb, &invert_area);
+	}
+
 	elem->dirty = false;
 }
 
@@ -171,18 +196,6 @@ static void gui_element_set_size_(gui_element_t *elem, unsigned int width, unsig
 	elem->area.size.x = width;
 	elem->area.size.y = height;
 	gui_element_invalidate(elem);
-}
-
-static void gui_fb_invert_area(const gui_fb_t *fb, const gui_area_t *area) {
-	unsigned int x, y;
-
-	for (y = 0; y < area->size.y; y++) {
-		for (x = 0; x < area->size.x; x++) {
-			unsigned int index = y * fb->stride + x;
-
-			fb->pixels[index] = GUI_INVERT_PIXEL(fb->pixels[index]);
-		}
-	}
 }
 
 static void gui_list_render(gui_element_t *element, const gui_point_t *source_offset, const gui_fb_t *fb, const gui_point_t *destination_size) {
@@ -471,6 +484,12 @@ void gui_element_set_selectable(gui_element_t *elem, bool selectable) {
 void gui_element_set_hidden(gui_element_t *elem, bool hidden) {
 	elem->hidden = hidden;
 	gui_element_invalidate_ignore_hidden(elem);
+	gui_element_check_render(elem);
+}
+
+void gui_element_set_inverted(gui_element_t *elem, bool inverted) {
+	elem->inverted = inverted;
+	gui_element_invalidate(elem);
 	gui_element_check_render(elem);
 }
 
