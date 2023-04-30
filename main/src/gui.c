@@ -8,11 +8,12 @@
 
 static const char *TAG = "gui";
 
-static void gui_element_init(gui_element_t *elem) {
+static void gui_element_init(gui_element_t *elem, const gui_element_ops_t *ops) {
 	INIT_LIST_HEAD(elem->list);
 	INIT_LIST_HEAD(elem->event_handlers);
 	elem->parent = NULL;
 	elem->inverted = false;
+	elem->ops = ops;
 }
 
 static void gui_element_check_render(gui_element_t *elem);
@@ -196,11 +197,14 @@ static const gui_element_ops_t gui_container_ops = {
 	.process_button_event = gui_container_process_button_event,
 };
 
-gui_element_t *gui_container_init(gui_container_t *container) {
-	gui_element_init(&container->element);
+static gui_element_t *gui_container_init_(gui_container_t *container, const gui_element_ops_t *ops) {
+	gui_element_init(&container->element, ops);
 	INIT_LIST_HEAD(container->children);
-	container->element.ops = &gui_container_ops;
 	return &container->element;
+}
+
+gui_element_t *gui_container_init(gui_container_t *container) {
+	return gui_container_init_(container, &gui_container_ops);
 }
 
 static void gui_element_set_size_(gui_element_t *elem, unsigned int width, unsigned int height) {
@@ -417,8 +421,7 @@ static const gui_element_ops_t gui_list_ops = {
 };
 
 gui_element_t *gui_list_init(gui_list_t *list) {
-	gui_container_init(&list->container);
-	list->container.element.ops = &gui_list_ops;
+	gui_container_init_(&list->container, &gui_list_ops);
 	list->selected_entry = NULL;
 	list->last_y_scroll_pos = 0;
 	return &list->container.element;
@@ -445,7 +448,7 @@ static const gui_element_ops_t gui_image_ops = {
 };
 
 gui_element_t *gui_image_init(gui_image_t *image, unsigned int width, unsigned int height, const uint8_t *image_data_start) {
-	gui_element_init(&image->element);
+	gui_element_init(&image->element, &gui_image_ops);
 	image->element.ops = &gui_image_ops;
 	gui_element_set_size_(&image->element, width, height);
 	image->image_data_start = image_data_start;
