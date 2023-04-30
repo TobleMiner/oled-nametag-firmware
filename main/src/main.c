@@ -18,6 +18,7 @@
 #include "flash.h"
 #include "gifplayer.h"
 #include "gui.h"
+#include "menutree.h"
 #include "pixelflut/pixelflut.h"
 #include "settings.h"
 #include "webserver.h"
@@ -197,7 +198,9 @@ gui_list_t gui_list_settings;
 gui_image_t gui_image_gif_player;
 gui_image_t gui_image_wlan_settings;
 gui_image_t gui_image_power_off;
+gui_container_t gui_container_wlan_settings2;
 gui_image_t gui_image_wlan_settings2;
+gui_rectangle_t gui_rectangle;
 gui_event_handler_t gui_image_gif_player_on_click_handler;
 gui_event_handler_t gui_image_wlan_settings_on_click_handler;
 gui_event_handler_t gui_image_power_off_on_click_handler;
@@ -227,6 +230,8 @@ bool on_image_power_off_click(const gui_event_handler_t *event, gui_element_t *e
 	gui_element_set_position(&gui_list_settings.container.element, 14 + (gui_list_settings.container.element.area.position.x - 14 + 3) % 30, gui_list_settings.container.element.area.position.y);
 	return false;
 }
+
+menu_t *menu;
 
 void app_main(void)
 {
@@ -278,11 +283,16 @@ void app_main(void)
 
 	// Initialize GUI
 	gui_init(&gui, NULL, &gui_ops);
+	menu = menutree_init(&gui.container);
+	menu_show(menu);
+/*
 	gui_list_init(&gui_list_settings);
 	gui_image_init(&gui_image_gif_player, 119, 21, EMBEDDED_FILE_PTR(gif_player_119x21_raw));
 	gui_image_init(&gui_image_wlan_settings, 119, 20, EMBEDDED_FILE_PTR(wlan_settings_119x20_raw));
 	gui_image_init(&gui_image_power_off, 119, 18, EMBEDDED_FILE_PTR(power_off_119x18_raw));
 	gui_image_init(&gui_image_wlan_settings2, 119, 20, EMBEDDED_FILE_PTR(wlan_settings_119x20_raw));
+	gui_container_init(&gui_container_wlan_settings2);
+	gui_rectangle_init(&gui_rectangle);
 
 	gui_element_add_child(&gui.container.element, &gui_list_settings.container.element);
 	gui_element_set_position(&gui_list_settings.container.element, 14, 0);
@@ -309,12 +319,22 @@ void app_main(void)
 	event_handler_cfg.cb = on_image_power_off_click;
 	gui_element_add_event_handler(&gui_image_power_off.element, &gui_image_power_off_on_click_handler, &event_handler_cfg);
 
+	gui_element_set_selectable(&gui_container_wlan_settings2.element, true);
+	gui_element_add_child(&gui_list_settings.container.element, &gui_container_wlan_settings2.element);
+	gui_element_set_position(&gui_container_wlan_settings2.element, 0, 66);
+	gui_element_set_size(&gui_container_wlan_settings2.element, 270, 70);
+
 	gui_element_set_selectable(&gui_image_wlan_settings2.element, true);
-	gui_element_add_child(&gui_list_settings.container.element, &gui_image_wlan_settings2.element);
-	gui_element_set_position(&gui_image_wlan_settings2.element, 0, 66);
+	gui_element_add_child(&gui_container_wlan_settings2.element, &gui_image_wlan_settings2.element);
+	gui_element_set_position(&gui_image_wlan_settings2.element, 0, 25);
+
+	gui_element_add_child(&gui.container.element, &gui_rectangle.element);
+	gui_element_set_size(&gui_rectangle.element, 256, 64);
+	gui_rectangle_set_color(&gui_rectangle, 255);
 
 	gui_element_show(&gui_list_settings.container.element);
-
+	gui_element_show(&gui_rectangle.element);
+*/
 	// Setup buttons
 	buttons_init();
 	const button_event_handler_multi_user_cfg_t button_cfg = {
@@ -322,7 +342,7 @@ void app_main(void)
 			.cb = handle_gifplayer_button_press,
 		},
 		.multi = {
-			.button_filter = (1 << BUTTON_UP) | (1 << BUTTON_DOWN) | (1 << BUTTON_ENTER),
+			.button_filter = (1 << BUTTON_UP) | (1 << BUTTON_DOWN) | (1 << BUTTON_ENTER) | (1 << BUTTON_EXIT),
 			.action_filter = (1 << BUTTON_ACTION_RELEASE)
 		}
 	};

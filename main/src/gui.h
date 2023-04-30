@@ -99,13 +99,14 @@ struct gui {
 typedef struct gui_event_handler gui_event_handler_t;
 
 typedef enum gui_event {
-	GUI_EVENT_CLICK
+	GUI_EVENT_CLICK,
+	GUI_EVENT_BACK
 } gui_event_t;
 
 typedef struct gui_event_handler_cfg {
-	gui_event_t event;
+	unsigned int event_filter;
 	void *priv;
-	bool (*cb)(const gui_event_handler_t *event, gui_element_t *elem);
+	bool (*cb)(const gui_event_handler_t *handler, gui_event_t event, gui_element_t *elem);
 } gui_event_handler_cfg_t;
 
 struct gui_event_handler {

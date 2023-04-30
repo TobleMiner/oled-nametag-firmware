@@ -93,8 +93,8 @@ static bool gui_element_dispatch_event(gui_element_t *element, gui_event_t event
 	gui_event_handler_t *cursor;
 
 	LIST_FOR_EACH_ENTRY(cursor, &element->event_handlers, list) {
-		if (cursor->cfg.event == event) {
-			if (cursor->cfg.cb(cursor, element)) {
+		if (cursor->cfg.event_filter & (1 << event)) {
+			if (cursor->cfg.cb(cursor, event, element)) {
 				return true;
 			}
 		}
@@ -385,6 +385,14 @@ static bool gui_list_process_button_event(gui_element_t *elem, const button_even
 	if (gui_list_is_selected_entry_valid(list) &&
 	    event->button == BUTTON_ENTER) {
 		if (gui_element_dispatch_event(list->selected_entry, GUI_EVENT_CLICK)) {
+			*stop_propagation = true;
+			return true;
+		}
+	}
+
+	if (gui_list_is_selected_entry_valid(list) &&
+	    event->button == BUTTON_EXIT) {
+		if (gui_element_dispatch_event(list->selected_entry, GUI_EVENT_BACK)) {
 			*stop_propagation = true;
 			return true;
 		}
