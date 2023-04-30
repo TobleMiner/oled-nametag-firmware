@@ -200,52 +200,102 @@ static void gui_element_set_size_(gui_element_t *elem, unsigned int width, unsig
 
 static void gui_list_render(gui_element_t *element, const gui_point_t *source_offset, const gui_fb_t *fb, const gui_point_t *destination_size) {
 	gui_list_t *list = container_of(element, gui_list_t, container.element);
+	gui_element_t *selected_entry = list->selected_entry;
 	gui_point_t pos;
 
 	gui_element_get_absolute_position(element, &pos);
 	ESP_LOGI(TAG, "Rendering list @[%u, %u]...", pos.x, pos.y);
 
+	if (selected_entry) {
+		gui_area_t *area = &selected_entry->area;
+
+		if (area->position.y + area->size.y - list->last_y_scroll_pos >= destination_size->y) {
+			list->last_y_scroll_pos = area->position.y + area->size.y - destination_size->y;
+		} else if (list->last_y_scroll_pos > area->position.y) {
+			list->last_y_scroll_pos = area->position.y;
+		}
+		ESP_LOGI(TAG, "Need to scroll by %d pixels to show selected entry", list->last_y_scroll_pos);
+	}
+
 	gui_element_t *cursor;
 	LIST_FOR_EACH_ENTRY(cursor, &list->container.children, list) {
 		// Render area realtive to list
+		gui_point_t scrolled_source_offset = *source_offset;
 		gui_area_t render_area = cursor->area;
 		gui_fb_t local_fb = {
-			.pixels = &fb->pixels[render_area.position.y * fb->stride + render_area.position.x],
 			.stride = fb->stride
 		};
 
+//		scrolled_source_offset.y += list->last_y_scroll_pos;
+		render_area.position.x -= source_offset->x;
+		render_area.position.y -= source_offset->y;
+		render_area.position.y -= list->last_y_scroll_pos;
+
+		ESP_LOGI(TAG, "Scroll shifts render area to %d", render_area.position.y);
+
+		if (render_area.position.x < 0) {
+			scrolled_source_offset.x = -render_area.position.x;
+			render_area.position.x = 0;
+		}
+
+		if (render_area.position.y < 0) {
+			scrolled_source_offset.y = -render_area.position.y;
+			render_area.position.y = 0;
+			ESP_LOGI(TAG, "Compensating negative y position by source offset of %d", scrolled_source_offset.y);
+		}
+/*
+		if (render_area.position.x < source_offset.x) {
+			scrolled_source_offset.x += source_offset.x - render_area.position.x;
+			render_area.position.x = 0;
+		}
+
+		if (render_area.position.y < source_offset.y) {
+			scrolled_source_offset.y += source_offset.y - render_area.position.y;
+			render_area.position.y = 0;
+		}
+*/
 		// Check if there is anything to render
-		if (source_offset->x >= render_area.position.x + render_area.size.x ||
-		    source_offset->y >= render_area.position.y + render_area.size.y) {
+		if (scrolled_source_offset.x >= render_area.position.x + render_area.size.x ||
+		    scrolled_source_offset.y >= render_area.position.y + render_area.size.y) {
 			// Applied offsets collapse element to zero size, no need to render it
+			ESP_LOGI(TAG, "Source offset skips over render area, nothing to do");
 			continue;
 		}
 
-		if (render_area.position.x >= source_offset->x + destination_size->x ||
-		    render_area.position.y >= source_offset->y + destination_size->y) {
+		if (render_area.position.x >= scrolled_source_offset.x + destination_size->x ||
+		    render_area.position.y >= scrolled_source_offset.y + destination_size->y) {
 			// Applied offsets collapse element to zero size, no need to render it
+			ESP_LOGI(TAG, "Destination area ends before render area starts, nothing to do");
 			continue;
 		}
+
+		local_fb.pixels = &fb->pixels[render_area.position.y * fb->stride + render_area.position.x];
 
 		// Clip rendering area by destination area
-		if (render_area.position.x + render_area.size.x - source_offset->x > destination_size->x) {
-			render_area.size.x = source_offset->x + destination_size->x - render_area.position.x;
+		if (render_area.position.x + render_area.size.x - scrolled_source_offset.x > destination_size->x) {
+//			render_area.size.x = scrolled_source_offset.x + destination_size->x - render_area.position.x;
+			render_area.size.x = destination_size->x + render_area.position.x - scrolled_source_offset.x;
+			ESP_LOGI(TAG, "Limiting horizontal size of render area");
 		}
-		if (render_area.position.y + render_area.size.y - source_offset->y > destination_size->y) {
-			render_area.size.y = source_offset->y + destination_size->y - render_area.position.y;
+		if (render_area.position.y + render_area.size.y - scrolled_source_offset.y > destination_size->y) {
+//			render_area.size.y = scrolled_source_offset.y + destination_size->y - render_area.position.y;
+			render_area.size.y = destination_size->y + render_area.position.y - scrolled_source_offset.y;
+			ESP_LOGI(TAG, "Limiting vertical size of render area");
 		}
 
-		gui_element_render(cursor, source_offset, &local_fb, &render_area.size);
+		gui_element_render(cursor, &scrolled_source_offset, &local_fb, &render_area.size);
 
 		// Highlight selected entry by inverting its pixels
 		if (cursor == list->selected_entry) {
 			gui_area_t invert_area = {
-				.position = {0, 0},
+				.position = { 0, 0 },
 				.size = render_area.size
 			};
 
 			gui_fb_invert_area(&local_fb, &invert_area);
 		}
+
+		ESP_LOGI(TAG, "");
 	}
 }
 
@@ -366,6 +416,7 @@ gui_element_t *gui_list_init(gui_list_t *list) {
 	gui_container_init(&list->container);
 	list->container.element.ops = &gui_list_ops;
 	list->selected_entry = NULL;
+	list->last_y_scroll_pos = 0;
 	return &list->container.element;
 }
 

@@ -66,6 +66,7 @@ typedef struct gui_list {
 
 	// Managed properties
 	gui_element_t *selected_entry;
+	int last_y_scroll_pos;
 } gui_list_t;
 
 typedef struct gui_image {

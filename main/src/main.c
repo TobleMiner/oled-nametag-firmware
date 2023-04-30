@@ -197,6 +197,7 @@ gui_list_t gui_list_settings;
 gui_image_t gui_image_gif_player;
 gui_image_t gui_image_wlan_settings;
 gui_image_t gui_image_power_off;
+gui_image_t gui_image_wlan_settings2;
 gui_event_handler_t gui_image_gif_player_on_click_handler;
 gui_event_handler_t gui_image_wlan_settings_on_click_handler;
 gui_event_handler_t gui_image_power_off_on_click_handler;
@@ -212,9 +213,18 @@ const gui_ops_t gui_ops = {
 	.request_render = gui_request_render
 };
 
-bool on_image_click(const gui_event_t *event, gui_element_t *elem) {
-	ESP_LOGI(TAG, "hiding %p", elem);
-	gui_element_set_hidden(elem, true);
+bool on_image_gif_player_click(const gui_event_handler_t *event, gui_element_t *elem) {
+	gui_element_set_inverted(&gui_list_settings.container.element, !gui_list_settings.container.element.inverted);
+	return false;
+}
+
+bool on_image_wlan_settings_click(const gui_event_handler_t *event, gui_element_t *elem) {
+	gui_element_set_hidden(&gui_image_power_off.element, !gui_image_power_off.element.hidden);
+	return false;
+}
+
+bool on_image_power_off_click(const gui_event_handler_t *event, gui_element_t *elem) {
+	gui_element_set_position(&gui_list_settings.container.element, 14 + (gui_list_settings.container.element.area.position.x - 14 + 3) % 30, gui_list_settings.container.element.area.position.y);
 	return false;
 }
 
@@ -267,16 +277,12 @@ void app_main(void)
 	gifplayer_init();
 
 	// Initialize GUI
-	ESP_LOGI(TAG, "&gui_list_settings=%p", &gui_list_settings.container.element);
-	ESP_LOGI(TAG, "&gui_image_gif_player=%p", &gui_image_gif_player.element);
-	ESP_LOGI(TAG, "&gui_image_wlan_settings=%p", &gui_image_wlan_settings.element);
-	ESP_LOGI(TAG, "&gui_image_power_off=%p", &gui_image_power_off.element);
-
 	gui_init(&gui, NULL, &gui_ops);
 	gui_list_init(&gui_list_settings);
 	gui_image_init(&gui_image_gif_player, 119, 21, EMBEDDED_FILE_PTR(gif_player_119x21_raw));
 	gui_image_init(&gui_image_wlan_settings, 119, 20, EMBEDDED_FILE_PTR(wlan_settings_119x20_raw));
 	gui_image_init(&gui_image_power_off, 119, 18, EMBEDDED_FILE_PTR(power_off_119x18_raw));
+	gui_image_init(&gui_image_wlan_settings2, 119, 20, EMBEDDED_FILE_PTR(wlan_settings_119x20_raw));
 
 	gui_element_add_child(&gui.container.element, &gui_list_settings.container.element);
 	gui_element_set_position(&gui_list_settings.container.element, 14, 0);
@@ -287,19 +293,25 @@ void app_main(void)
 	gui_element_set_position(&gui_image_gif_player.element, 0, 2);
 	gui_event_handler_cfg_t event_handler_cfg = {
 		.event = GUI_EVENT_CLICK,
-		.cb = on_image_click,
+		.cb = on_image_gif_player_click,
 	};
 	gui_element_add_event_handler(&gui_image_gif_player.element, &gui_image_gif_player_on_click_handler, &event_handler_cfg);
 
 	gui_element_set_selectable(&gui_image_wlan_settings.element, true);
 	gui_element_add_child(&gui_list_settings.container.element, &gui_image_wlan_settings.element);
 	gui_element_set_position(&gui_image_wlan_settings.element, 0, 23);
+	event_handler_cfg.cb = on_image_wlan_settings_click;
 	gui_element_add_event_handler(&gui_image_wlan_settings.element, &gui_image_wlan_settings_on_click_handler, &event_handler_cfg);
 
 	gui_element_set_selectable(&gui_image_power_off.element, true);
 	gui_element_add_child(&gui_list_settings.container.element, &gui_image_power_off.element);
 	gui_element_set_position(&gui_image_power_off.element, 0, 43);
+	event_handler_cfg.cb = on_image_power_off_click;
 	gui_element_add_event_handler(&gui_image_power_off.element, &gui_image_power_off_on_click_handler, &event_handler_cfg);
+
+	gui_element_set_selectable(&gui_image_wlan_settings2.element, true);
+	gui_element_add_child(&gui_list_settings.container.element, &gui_image_wlan_settings2.element);
+	gui_element_set_position(&gui_image_wlan_settings2.element, 0, 66);
 
 	gui_element_show(&gui_list_settings.container.element);
 
