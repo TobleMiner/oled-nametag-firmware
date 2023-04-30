@@ -10,7 +10,6 @@ static const char *TAG = "gui";
 
 static void gui_element_init(gui_element_t *elem, const gui_element_ops_t *ops) {
 	INIT_LIST_HEAD(elem->list);
-	INIT_LIST_HEAD(elem->event_handlers);
 	elem->parent = NULL;
 	elem->inverted = false;
 	elem->ops = ops;
@@ -30,9 +29,7 @@ static void gui_element_check_render(gui_element_t *elem) {
 static void gui_element_invalidate(gui_element_t *elem);
 static void gui_element_invalidate_ignore_hidden_shown(gui_element_t *elem) {
 	elem->dirty = true;
-	if (elem->ops->invalidate) {
-		elem->ops->invalidate(elem);
-	} else if (elem->parent) {
+	if (elem->parent) {
 		gui_element_invalidate(elem->parent);
 	}
 }
@@ -87,20 +84,6 @@ static void gui_element_set_shown(gui_element_t *element, bool shown) {
 		element->ops->update_shown(element);
 	}
 	gui_element_invalidate_ignore_hidden_shown(element);
-}
-
-static bool gui_element_dispatch_event(gui_element_t *element, gui_event_t event) {
-	gui_event_handler_t *cursor;
-
-	LIST_FOR_EACH_ENTRY(cursor, &element->event_handlers, list) {
-		if (cursor->cfg.event_filter & (1 << event)) {
-			if (cursor->cfg.cb(cursor, event, element)) {
-				return true;
-			}
-		}
-	}
-
-	return false;
 }
 
 static void gui_container_render(gui_element_t *element, const gui_point_t *source_offset, const gui_fb_t *fb, const gui_point_t *destination_size) {
@@ -167,21 +150,6 @@ static void gui_container_render(gui_element_t *element, const gui_point_t *sour
 	}
 }
 
-static bool gui_container_process_button_event(gui_element_t *element, const button_event_t *event, bool *stop_propagation) {
-	gui_container_t *container = container_of(element, gui_container_t, element);
-
-	gui_element_t *cursor;
-	LIST_FOR_EACH_ENTRY(cursor, &container->children, list) {
-		if (cursor->shown && !cursor->hidden && cursor->ops->process_button_event) {
-			if (cursor->ops->process_button_event(cursor, event, stop_propagation)) {
-				return true;
-			}
-		}
-	}
-
-	return false;
-}
-
 static void gui_container_update_shown(gui_element_t *element) {
 	gui_container_t *container = container_of(element, gui_container_t, element);
 
@@ -194,7 +162,6 @@ static void gui_container_update_shown(gui_element_t *element) {
 static const gui_element_ops_t gui_container_ops = {
 	.render = gui_container_render,
 	.update_shown = gui_container_update_shown,
-	.process_button_event = gui_container_process_button_event,
 };
 
 static gui_element_t *gui_container_init_(gui_container_t *container, const gui_element_ops_t *ops) {
@@ -307,125 +274,9 @@ static void gui_list_render(gui_element_t *element, const gui_point_t *source_of
 	}
 }
 
-typedef enum gui_list_search_direction {
-	GUI_LIST_SEARCH_DOWN,
-	GUI_LIST_SEARCH_UP
-} gui_list_search_direction_t;
-
-static gui_element_t *gui_list_find_next_selectable_entry(gui_list_t *list, struct list_head *start, gui_list_search_direction_t direction) {
-	struct list_head *cursor = start;
-
-	do {
-		if (direction == GUI_LIST_SEARCH_DOWN) {
-			cursor = cursor->next;
-		} else {
-			cursor = cursor->prev;
-		}
-
-		if (cursor != &list->container.children) {
-			gui_element_t *elem = container_of(cursor, gui_element_t, list);
-
-			if (elem->shown && !elem->hidden && elem->selectable) {
-				return elem;
-			}
-		}
-	} while (cursor != start);
-
-	return NULL;
-}
-
-static bool gui_list_scroll_up_down(gui_list_t *list, gui_list_search_direction_t direction) {
-	if (list->selected_entry) {
-		gui_element_t *elem = gui_list_find_next_selectable_entry(list, &list->selected_entry->list, direction);
-
-		if (elem && elem != list->selected_entry) {
-			list->selected_entry = elem;
-			return true;
-		}
-	}
-
-	return false;
-}
-
-static bool gui_list_is_selected_entry_valid(gui_list_t *list) {
-	gui_element_t *cursor;
-
-	if (list->selected_entry) {
-		bool selected_entry_in_list = false;
-
-		LIST_FOR_EACH_ENTRY(cursor, &list->container.children, list) {
-			if (cursor == list->selected_entry) {
-				selected_entry_in_list = true;
-				break;
-			}
-		}
-
-		if (selected_entry_in_list) {
-			return list->selected_entry->shown &&
-			       !list->selected_entry->hidden &&
-			       list->selected_entry->selectable;
-		}
-	}
-
-	return false;
-}
-
-static bool gui_list_process_button_event(gui_element_t *elem, const button_event_t *event, bool *stop_propagation) {
-	gui_list_t *list = container_of(elem, gui_list_t, container.element);
-
-	if (event->action == BUTTON_ACTION_RELEASE &&
-	   (event->button == BUTTON_UP ||
-	    event->button == BUTTON_DOWN)) {
-		if (gui_list_scroll_up_down(list, event->button == BUTTON_DOWN ? GUI_LIST_SEARCH_DOWN : GUI_LIST_SEARCH_UP)) {
-			gui_element_invalidate(&list->container.element);
-		}
-		return true;
-	}
-
-	if (gui_list_is_selected_entry_valid(list) &&
-	    event->button == BUTTON_ENTER) {
-		if (gui_element_dispatch_event(list->selected_entry, GUI_EVENT_CLICK)) {
-			*stop_propagation = true;
-			return true;
-		}
-	}
-
-	if (gui_list_is_selected_entry_valid(list) &&
-	    event->button == BUTTON_EXIT) {
-		if (gui_element_dispatch_event(list->selected_entry, GUI_EVENT_BACK)) {
-			*stop_propagation = true;
-			return true;
-		}
-	}
-
-	return false;
-}
-
-static void gui_list_update_selection(gui_list_t *list) {
-	if (!gui_list_is_selected_entry_valid(list)) {
-		gui_element_t *new_selected_entry = gui_list_find_next_selectable_entry(list, &list->container.children, GUI_LIST_SEARCH_DOWN);
-
-		if (new_selected_entry != list->selected_entry) {
-			list->selected_entry = new_selected_entry;
-			gui_element_invalidate(&list->container.element);
-		}
-	}
-}
-
-static void gui_list_invalidate(gui_element_t *elem) {
-	gui_list_t *list = container_of(elem, gui_list_t, container.element);
-
-	gui_list_update_selection(list);
-	if (elem->parent) {
-		gui_element_invalidate(elem->parent);
-	}
-}
-
 static const gui_element_ops_t gui_list_ops = {
 	.render = gui_list_render,
-	.invalidate = gui_list_invalidate,
 	.update_shown = gui_container_update_shown,
-	.process_button_event = gui_list_process_button_event,
 };
 
 gui_element_t *gui_list_init(gui_list_t *list) {
@@ -516,16 +367,6 @@ void gui_unlock(gui_t *gui) {
 	xSemaphoreGive(gui->lock);
 }
 
-void gui_element_add_event_handler(gui_element_t *elem, gui_event_handler_t *handler, const gui_event_handler_cfg_t *cfg) {
-	handler->cfg = *cfg;
-	INIT_LIST_HEAD(handler->list);
-	LIST_APPEND_TAIL(&handler->list, &elem->event_handlers);
-}
-
-void gui_element_remove_event_handler(gui_event_handler_t *handler) {
-	LIST_DELETE(&handler->list);
-}
-
 static void gui_rectangle_render(gui_element_t *element, const gui_point_t *source_offset, const gui_fb_t *fb, const gui_point_t *destination_size) {
 	gui_rectangle_t *rect = container_of(element, gui_rectangle_t, element);
 	int width = MIN(element->area.size.x - source_offset->x, destination_size->x);
@@ -600,12 +441,6 @@ void gui_element_set_size(gui_element_t *elem, unsigned int width, unsigned int 
 	gui_element_check_render(elem);
 }
 
-void gui_element_set_selectable(gui_element_t *elem, bool selectable) {
-	elem->selectable = selectable;
-	gui_element_invalidate(elem);
-	gui_element_check_render(elem);
-}
-
 void gui_element_set_hidden(gui_element_t *elem, bool hidden) {
 	elem->hidden = hidden;
 	gui_element_invalidate_ignore_hidden(elem);
@@ -638,15 +473,6 @@ void gui_element_remove_child(gui_element_t *parent, gui_element_t *child) {
 	gui_element_check_render(parent);
 }
 
-bool gui_process_button_event(gui_t *gui, const button_event_t *event) {
-	bool stop_propagation = false;
-
-	gui_container_process_button_event(&gui->container.element, event, &stop_propagation);
-	gui_element_check_render(&gui->container.element);
-
-	return stop_propagation;
-}
-
 void gui_rectangle_set_filled(gui_rectangle_t *rectangle, bool filled) {
 	rectangle->filled = filled;
 	gui_element_invalidate(&rectangle->element);
@@ -657,4 +483,10 @@ void gui_rectangle_set_color(gui_rectangle_t *rectangle, gui_pixel_t color) {
 	rectangle->color = color;
 	gui_element_invalidate(&rectangle->element);
 	gui_element_check_render(&rectangle->element);
+}
+
+void gui_list_set_selected_entry(gui_list_t *list, gui_element_t *entry) {
+	list->selected_entry = entry;
+	gui_element_invalidate(&list->container.element);
+	gui_element_check_render(&list->container.element);
 }

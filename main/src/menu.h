@@ -17,14 +17,13 @@ struct menu_entry {
 	const char *name;
 	menu_entry_submenu_t *parent;
 	gui_element_t *gui_element;
-	gui_event_handler_t gui_event_handler;
 };
 
 typedef struct menu_entry_submenu {
         menu_entry_t base;
 
 	struct list_head entries;
-	gui_container_t *gui_container;
+	gui_list_t *gui_list;
 } menu_entry_submenu_t;
 
 typedef struct menu_entry_app {
@@ -37,8 +36,9 @@ typedef struct menu_entry_app {
 typedef struct menu {
 	gui_element_t *gui_root;
 	menu_entry_submenu_t *root;
-	menu_entry_t *active_menu_entry;
+	menu_entry_t *selected_entry;
 	bool in_app;
+	button_event_handler_t button_event_handler;
 } menu_t;
 
 void menu_init(menu_t *menu, menu_entry_submenu_t *root, gui_element_t *gui_root);

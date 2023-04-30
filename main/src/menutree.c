@@ -12,7 +12,7 @@ static menu_entry_submenu_t menutree_root = {
 		.parent = NULL,
 		.gui_element = NULL
 	},
-	.gui_container = &menutree_root_gui_list.container
+	.gui_list = &menutree_root_gui_list
 };
 
 // Root menu - Applications
@@ -24,7 +24,7 @@ static menu_entry_submenu_t menutree_root_applications = {
 		.parent = &menutree_root,
 		.gui_element = &menutree_applications_gui_image.element
 	},
-	.gui_container = &menutree_applications_gui_list.container
+	.gui_list = &menutree_applications_gui_list
 };
 
 // Root menu - Settings
@@ -36,7 +36,7 @@ static menu_entry_submenu_t menutree_root_settings = {
 		.parent = &menutree_root,
 		.gui_element = &menutree_settings_gui_image.element
 	},
-	.gui_container = &menutree_settings_gui_list.container
+	.gui_list = &menutree_settings_gui_list
 };
 
 // Root menu - Power off
@@ -108,27 +108,22 @@ static void gui_element_init(gui_container_t *root) {
 	gui_list_init(&menutree_applications_gui_list);
 	gui_element_set_size(&menutree_applications_gui_list.container.element, MENU_LIST_WIDTH, MENU_LIST_HEIGHT);
 	gui_image_init(&menutree_applications_gui_image, 119, 22, EMBEDDED_FILE_PTR(applications_119x22_raw));
-	gui_element_set_selectable(&menutree_applications_gui_image.element, true);
 
 	// Root menu - Settings
 	gui_list_init(&menutree_settings_gui_list);
 	gui_element_set_size(&menutree_settings_gui_list.container.element, MENU_LIST_WIDTH, MENU_LIST_HEIGHT);
 	gui_image_init(&menutree_settings_gui_image, 119, 22, EMBEDDED_FILE_PTR(settings_119x22_raw));
 	gui_element_set_position(&menutree_settings_gui_image.element, 0, 22);
-	gui_element_set_selectable(&menutree_settings_gui_image.element, true);
 
 	// Root menu - Power off
 	gui_image_init(&menutree_power_off_gui_image, 119, 18, EMBEDDED_FILE_PTR(power_off_119x18_raw));
 	gui_element_set_position(&menutree_power_off_gui_image.element, 0, 44);
-	gui_element_set_selectable(&menutree_power_off_gui_image.element, true);
 
 	// Root menu - Applications - GIF player
 	gui_image_init(&menutree_gifplayer_gui_image, 119, 22, EMBEDDED_FILE_PTR(gif_player_119x22_raw));
-	gui_element_set_selectable(&menutree_gifplayer_gui_image.element, true);
 
 	// Root menu - Settings - WLAN Settings
 	gui_image_init(&menutree_wlan_settings_gui_image, 119, 22, EMBEDDED_FILE_PTR(wlan_settings_119x22_raw));
-	gui_element_set_selectable(&menutree_wlan_settings_gui_image.element, true);
 
 	// Vertical separator
 	gui_rectangle_init(&menutree_vertical_separator);

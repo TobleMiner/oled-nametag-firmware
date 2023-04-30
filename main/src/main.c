@@ -174,9 +174,6 @@ gui_t gui;
 static button_event_handler_t gifplayer_button_event_handler;
 static bool handle_gifplayer_button_press(const button_event_t *event, void *priv) {
 	ESP_LOGI(TAG, "Button %s pressed", button_to_name(event->button));
-	gui_lock(&gui);
-	gui_process_button_event(&gui, event);
-	gui_unlock(&gui);
 /*
 	if (event->button == BUTTON_UP) {
 		gifplayer_play_prev_animation();
@@ -201,9 +198,6 @@ gui_image_t gui_image_power_off;
 gui_container_t gui_container_wlan_settings2;
 gui_image_t gui_image_wlan_settings2;
 gui_rectangle_t gui_rectangle;
-gui_event_handler_t gui_image_gif_player_on_click_handler;
-gui_event_handler_t gui_image_wlan_settings_on_click_handler;
-gui_event_handler_t gui_image_power_off_on_click_handler;
 
 TaskHandle_t main_task;
 
@@ -215,21 +209,6 @@ static void gui_request_render(const gui_t *gui) {
 const gui_ops_t gui_ops = {
 	.request_render = gui_request_render
 };
-
-bool on_image_gif_player_click(const gui_event_handler_t *event, gui_element_t *elem) {
-	gui_element_set_inverted(&gui_list_settings.container.element, !gui_list_settings.container.element.inverted);
-	return false;
-}
-
-bool on_image_wlan_settings_click(const gui_event_handler_t *event, gui_element_t *elem) {
-	gui_element_set_hidden(&gui_image_power_off.element, !gui_image_power_off.element.hidden);
-	return false;
-}
-
-bool on_image_power_off_click(const gui_event_handler_t *event, gui_element_t *elem) {
-	gui_element_set_position(&gui_list_settings.container.element, 14 + (gui_list_settings.container.element.area.position.x - 14 + 3) % 30, gui_list_settings.container.element.area.position.y);
-	return false;
-}
 
 menu_t *menu;
 
@@ -281,10 +260,6 @@ void app_main(void)
 	// Setup gifplayer
 	gifplayer_init();
 
-	// Initialize GUI
-	gui_init(&gui, NULL, &gui_ops);
-	menu = menutree_init(&gui.container);
-	menu_show(menu);
 /*
 	gui_list_init(&gui_list_settings);
 	gui_image_init(&gui_image_gif_player, 119, 21, EMBEDDED_FILE_PTR(gif_player_119x21_raw));
@@ -358,6 +333,11 @@ void app_main(void)
 	};
 	buttons_register_multi_button_event_handler(&gifplayer_button_event_handler, &button_cfg);
 	buttons_register_single_button_event_handler(&reset_button_event_handler, &reset_button_cfg);
+
+	// Initialize GUI
+	gui_init(&gui, NULL, &gui_ops);
+	menu = menutree_init(&gui.container);
+	menu_show(menu);
 
 	// Setup webserver
 	httpd_t *httpd = webserver_preinit();
