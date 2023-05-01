@@ -49,6 +49,7 @@ typedef struct button_event_handler_single_cfg {
 typedef struct button_event_handler {
 	struct list_head list;
 	struct list_head shadow_list;
+	bool enabled;
 	button_event_handler_type_t type;
 	button_event_handler_base_cfg_t base;
 	union {
@@ -77,3 +78,5 @@ const char *button_to_name(button_t button);
 void buttons_register_multi_button_event_handler(button_event_handler_t *handler, const button_event_handler_multi_user_cfg_t *cfg);
 void buttons_register_single_button_event_handler(button_event_handler_t *handler, const button_event_handler_single_user_cfg_t *cfg);
 void buttons_unregister_event_handler(button_event_handler_t *handler);
+void buttons_enable_event_handler(button_event_handler_t *handler);
+void buttons_disable_event_handler(button_event_handler_t *handler);

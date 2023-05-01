@@ -331,7 +331,9 @@ static void process_button_event(unsigned int button_idx, const button_event_but
 	xSemaphoreTake(button_mutex, portMAX_DELAY);
 	LIST_FOR_EACH_ENTRY(handler, &event_handlers, list) {
 		INIT_LIST_HEAD(handler->shadow_list);
-		LIST_APPEND_TAIL(&handler->shadow_list, &shadow_list);
+		if (handler->enabled) {
+			LIST_APPEND_TAIL(&handler->shadow_list, &shadow_list);
+		}
 	}
 	xSemaphoreGive(button_mutex);
 
@@ -408,6 +410,7 @@ static void register_event_handler(button_event_handler_t *handler) {
 	xSemaphoreTake(button_mutex, portMAX_DELAY);
 	INIT_LIST_HEAD(handler->list);
 	LIST_APPEND_TAIL(&handler->list, &event_handlers);
+	handler->enabled = false;
 	xSemaphoreGive(button_mutex);
 }
 
@@ -430,4 +433,12 @@ void buttons_unregister_event_handler(button_event_handler_t *handler) {
 	xSemaphoreTake(button_mutex, portMAX_DELAY);
 	LIST_DELETE(&handler->list);
 	xSemaphoreGive(button_mutex);
+}
+
+void buttons_disable_event_handler(button_event_handler_t *handler) {
+	handler->enabled = false;
+}
+
+void buttons_enable_event_handler(button_event_handler_t *handler) {
+	handler->enabled = true;
 }
