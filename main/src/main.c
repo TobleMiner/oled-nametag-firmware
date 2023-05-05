@@ -211,6 +211,36 @@ const gui_ops_t gui_ops = {
 
 menu_t *menu;
 
+void button_emulator_event_loop(void *arg) {
+	uint8_t keybuf[3] = { 0 };
+	while (1) {
+		uint8_t byt;
+		ssize_t ret = fread(&byt, 1, 1, stdin);
+		if (ret > 0) {
+			ESP_LOGI(TAG, "Read byte: 0x%02x", byt);
+			keybuf[0] = byt;
+			if (keybuf[2] == 0x1b && keybuf[1] == 0x5b) {
+				switch(keybuf[0]) {
+				case 0x41: //up
+					buttons_emulate_press(BUTTON_UP, 100);
+					break;
+				case 0x42: //down
+					buttons_emulate_press(BUTTON_DOWN, 100);
+					break;
+				case 0x44: //left
+					buttons_emulate_press(BUTTON_EXIT, 100);
+					break;
+				case 0x43: //right
+					buttons_emulate_press(BUTTON_ENTER, 100);
+					break;
+				}
+			}
+			memmove(&keybuf[1], &keybuf[0], 2);
+		}
+		vTaskDelay(1);
+	}
+}
+
 void app_main(void)
 {
 	esp_err_t ret;
@@ -359,6 +389,9 @@ void app_main(void)
 	char *current_default_animation = settings_get_default_animation();
 	ESP_LOGI(TAG, "Default animation: %s", STR_NULL(current_default_animation));
 	gifplayer_set_animation_(current_default_animation);
+
+	// Start polling input
+	ESP_ERROR_CHECK(xTaskCreate(button_emulator_event_loop, "button_emulator_event_loop", 4096, NULL, 10, NULL) != pdPASS);
 
 	int64_t last = esp_timer_get_time();
 	uint32_t flips = 0;

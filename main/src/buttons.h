@@ -80,3 +80,4 @@ void buttons_register_single_button_event_handler(button_event_handler_t *handle
 void buttons_unregister_event_handler(button_event_handler_t *handler);
 void buttons_enable_event_handler(button_event_handler_t *handler);
 void buttons_disable_event_handler(button_event_handler_t *handler);
+void buttons_emulate_press(button_t button, unsigned int press_duration_ms);

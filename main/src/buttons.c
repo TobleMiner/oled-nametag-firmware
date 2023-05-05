@@ -442,3 +442,29 @@ void buttons_disable_event_handler(button_event_handler_t *handler) {
 void buttons_enable_event_handler(button_event_handler_t *handler) {
 	handler->enabled = true;
 }
+
+void buttons_emulate_press(button_t button, unsigned int press_duration_ms) {
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(buttons); i++) {
+		const button_def_t *def = &buttons[i];
+
+		if (def->function == button) {
+			gpio_event_t event = {
+				.type = BUTTON_EVENT_BUTTON,
+				.button_idx = i,
+				.button = {
+					.action = BUTTON_ACTION_PRESS,
+					.press_duration_ms = 0
+				}
+			};
+			xQueueSendToBack(gpio_event_queue, &event, 0);
+
+			event.button.action = BUTTON_ACTION_RELEASE;
+			event.button.press_duration_ms = press_duration_ms;
+			xQueueSendToBack(gpio_event_queue, &event, 0);
+
+			break;
+		}
+	}
+}
