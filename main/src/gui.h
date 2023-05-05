@@ -31,7 +31,7 @@ typedef struct gui_fb {
 typedef struct gui_element gui_element_t;
 
 typedef struct gui_element_ops {
-	void (*render)(gui_element_t *element, const gui_point_t *source_offset, const gui_fb_t *fb, const gui_point_t *destination_size);
+	int (*render)(gui_element_t *element, const gui_point_t *source_offset, const gui_fb_t *fb, const gui_point_t *destination_size);
 	void (*update_shown)(gui_element_t *element);
 	void (*check_render)(gui_element_t *element);
 } gui_element_ops_t;
@@ -94,7 +94,7 @@ struct gui {
 
 // Top level GUI API
 gui_element_t *gui_init(gui_t *gui, void *priv, const gui_ops_t *ops);
-void gui_render(gui_t *gui, gui_pixel_t *fb, unsigned int stride, const gui_point_t *size);
+int gui_render(gui_t *gui, gui_pixel_t *fb, unsigned int stride, const gui_point_t *size);
 void gui_lock(gui_t *gui);
 void gui_unlock(gui_t *gui);
 

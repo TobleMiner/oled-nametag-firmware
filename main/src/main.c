@@ -202,7 +202,6 @@ gui_rectangle_t gui_rectangle;
 TaskHandle_t main_task;
 
 static void gui_request_render(const gui_t *gui) {
-	ESP_LOGI(TAG, "Rendering requested");
 	xTaskNotifyGive(main_task);
 }
 
@@ -256,9 +255,6 @@ void app_main(void)
 
 	// Setup WiFi
 	wifi_main();
-
-	// Setup gifplayer
-	gifplayer_init();
 
 /*
 	gui_list_init(&gui_list_settings);
@@ -336,6 +332,11 @@ void app_main(void)
 
 	// Initialize GUI
 	gui_init(&gui, NULL, &gui_ops);
+
+	// Setup gifplayer
+	gifplayer_init(&gui);
+
+	// Setup menu
 	menu = menutree_init(&gui.container);
 	menu_show(menu);
 
@@ -365,16 +366,22 @@ void app_main(void)
 	int last_frame_duration_ms = 0;
 	uint32_t cnt = 0;
 	bool hidden = false;
+	int render_ret = -1;
 	while (1) {
 		const gui_point_t render_size = {
 			256,
 			64
 		};
-		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+		if (render_ret < 0) {
+			ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+		} else if (!render_ret) {
+			ulTaskNotifyTake(pdTRUE, 0);
+		} else {
+			ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(render_ret));
+		}
 		gui_lock(&gui);
-		gui_render(&gui, gui_render_fb, 256, &render_size);
+		render_ret = gui_render(&gui, gui_render_fb, 256, &render_size);
 		gui_unlock(&gui);
-		ESP_LOGI(TAG, "GUI render complete");
 		fb_convert_grayscale(oled_fb, gui_render_fb);
 		slot = !slot;
 		oled_write_image(spidev, oled_fb, slot ? 1 : 0);

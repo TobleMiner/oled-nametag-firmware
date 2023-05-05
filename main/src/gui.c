@@ -4,19 +4,20 @@
 
 #include <esp_log.h>
 
+#include "gui_priv.h"
 #include "util.h"
 
 static const char *TAG = "gui";
 
-static void gui_element_init(gui_element_t *elem, const gui_element_ops_t *ops) {
+gui_element_t *gui_element_init(gui_element_t *elem, const gui_element_ops_t *ops) {
 	INIT_LIST_HEAD(elem->list);
 	elem->parent = NULL;
 	elem->inverted = false;
 	elem->ops = ops;
+	return elem;
 }
 
-static void gui_element_check_render(gui_element_t *elem);
-static void gui_element_check_render(gui_element_t *elem) {
+void gui_element_check_render(gui_element_t *elem) {
 	if (elem->dirty) {
 		if (elem->ops->check_render) {
 			elem->ops->check_render(elem);
@@ -26,7 +27,6 @@ static void gui_element_check_render(gui_element_t *elem) {
 	}
 }
 
-static void gui_element_invalidate(gui_element_t *elem);
 static void gui_element_invalidate_ignore_hidden_shown(gui_element_t *elem) {
 	elem->dirty = true;
 	if (elem->parent) {
@@ -40,7 +40,7 @@ static void gui_element_invalidate_ignore_hidden(gui_element_t *elem) {
 	}
 }
 
-static void gui_element_invalidate(gui_element_t *elem) {
+void gui_element_invalidate(gui_element_t *elem) {
 	if (!elem->hidden) {
 		gui_element_invalidate_ignore_hidden(elem);
 	}
@@ -58,9 +58,10 @@ static void gui_fb_invert_area(const gui_fb_t *fb, const gui_area_t *area) {
 	}
 }
 
-static void gui_element_render(gui_element_t *elem, const gui_point_t *source_offset, const gui_fb_t *fb, const gui_point_t *destination_size) {
+static int gui_element_render(gui_element_t *elem, const gui_point_t *source_offset, const gui_fb_t *fb, const gui_point_t *destination_size) {
+	int ret = -1;
 	if (elem->shown && !elem->hidden && elem->ops->render) {
-		elem->ops->render(elem, source_offset, fb, destination_size);
+		ret = elem->ops->render(elem, source_offset, fb, destination_size);
 	}
 
 	if (elem->inverted) {
@@ -76,6 +77,7 @@ static void gui_element_render(gui_element_t *elem, const gui_point_t *source_of
 	}
 
 	elem->dirty = false;
+	return ret;
 }
 
 static void gui_element_set_shown(gui_element_t *element, bool shown) {
@@ -86,10 +88,11 @@ static void gui_element_set_shown(gui_element_t *element, bool shown) {
 	gui_element_invalidate_ignore_hidden_shown(element);
 }
 
-static void gui_container_render(gui_element_t *element, const gui_point_t *source_offset, const gui_fb_t *fb, const gui_point_t *destination_size) {
+static int gui_container_render(gui_element_t *element, const gui_point_t *source_offset, const gui_fb_t *fb, const gui_point_t *destination_size) {
+	int ret = -1;
 	gui_container_t *container = container_of(element, gui_container_t, element);
 
-	ESP_LOGI(TAG, "Rendering container from [%d, %d] to [%d, %d]...", source_offset->x, source_offset->y, destination_size->x, destination_size->y);
+	ESP_LOGD(TAG, "Rendering container from [%d, %d] to [%d, %d]...", source_offset->x, source_offset->y, destination_size->x, destination_size->y);
 
 	gui_element_t *cursor;
 	LIST_FOR_EACH_ENTRY(cursor, &container->children, list) {
@@ -99,6 +102,7 @@ static void gui_container_render(gui_element_t *element, const gui_point_t *sour
 		gui_fb_t local_fb = {
 			.stride = fb->stride
 		};
+		int retval;
 
 		// Check if there is anything to render
 		if (local_source_offset.x >= render_area.position.x + render_area.size.x ||
@@ -118,11 +122,11 @@ static void gui_container_render(gui_element_t *element, const gui_point_t *sour
 		// Clip render area by destination area
 		if (render_area.position.x + render_area.size.x - local_source_offset.x > destination_size->x) {
 			render_area.size.x = destination_size->x - render_area.position.x + local_source_offset.x;
-			ESP_LOGI(TAG, "Limiting horizontal size of render area to %d", render_area.size.x);
+			ESP_LOGD(TAG, "Limiting horizontal size of render area to %d", render_area.size.x);
 		}
 		if (render_area.position.y + render_area.size.y - local_source_offset.y > destination_size->y) {
 			render_area.size.y = destination_size->y - render_area.position.y + local_source_offset.y;
-			ESP_LOGI(TAG, "Limiting vertical size of render area to %d", render_area.size.y);
+			ESP_LOGD(TAG, "Limiting vertical size of render area to %d", render_area.size.y);
 		}
 
 		// Calculate effective rendering area position relative to fb
@@ -146,8 +150,15 @@ static void gui_container_render(gui_element_t *element, const gui_point_t *sour
 
 		local_fb.pixels = &fb->pixels[render_area.position.y * fb->stride + render_area.position.x];
 
-		gui_element_render(cursor, &local_source_offset, &local_fb, &render_area.size);
+		retval = gui_element_render(cursor, &local_source_offset, &local_fb, &render_area.size);
+		if (ret == -1) {
+			ret = retval;
+		} else if (retval != -1) {
+			ret = MIN(ret, retval);
+		}
 	}
+
+	return ret;
 }
 
 static void gui_container_update_shown(gui_element_t *element) {
@@ -180,11 +191,12 @@ static void gui_element_set_size_(gui_element_t *elem, unsigned int width, unsig
 	gui_element_invalidate(elem);
 }
 
-static void gui_list_render(gui_element_t *element, const gui_point_t *source_offset, const gui_fb_t *fb, const gui_point_t *destination_size) {
+static int gui_list_render(gui_element_t *element, const gui_point_t *source_offset, const gui_fb_t *fb, const gui_point_t *destination_size) {
+	int ret = -1;
 	gui_list_t *list = container_of(element, gui_list_t, container.element);
 	gui_element_t *selected_entry = list->selected_entry;
 
-	ESP_LOGI(TAG, "Rendering list from [%d, %d] to [%d, %d]...", source_offset->x, source_offset->y, destination_size->x, destination_size->y);
+	ESP_LOGD(TAG, "Rendering list from [%d, %d] to [%d, %d]...", source_offset->x, source_offset->y, destination_size->x, destination_size->y);
 
 	if (selected_entry) {
 		gui_area_t *area = &selected_entry->area;
@@ -207,6 +219,7 @@ static void gui_list_render(gui_element_t *element, const gui_point_t *source_of
 		gui_fb_t local_fb = {
 			.stride = fb->stride
 		};
+		int retval;
 
 		ESP_LOGD(TAG, "Entry size: %dx%d", render_area.size.x, render_area.size.y);
 
@@ -258,7 +271,12 @@ static void gui_list_render(gui_element_t *element, const gui_point_t *source_of
 			ESP_LOGD(TAG, "Limiting vertical size of render area to %d", render_area.size.y);
 		}
 
-		gui_element_render(cursor, &scrolled_source_offset, &local_fb, &render_area.size);
+		retval = gui_element_render(cursor, &scrolled_source_offset, &local_fb, &render_area.size);
+		if (ret == -1) {
+			ret = retval;
+		} else if (retval != -1) {
+			ret = MIN(ret, retval);
+		}
 
 		// Highlight selected entry by inverting its pixels
 		if (cursor == list->selected_entry) {
@@ -272,6 +290,8 @@ static void gui_list_render(gui_element_t *element, const gui_point_t *source_of
 			gui_fb_invert_area(&local_fb, &invert_area);
 		}
 	}
+
+	return ret;
 }
 
 static const gui_element_ops_t gui_list_ops = {
@@ -286,20 +306,22 @@ gui_element_t *gui_list_init(gui_list_t *list) {
 	return &list->container.element;
 }
 
-static void gui_image_render(gui_element_t *element, const gui_point_t *source_offset, const gui_fb_t *fb, const gui_point_t *destination_size) {
+static int gui_image_render(gui_element_t *element, const gui_point_t *source_offset, const gui_fb_t *fb, const gui_point_t *destination_size) {
 	gui_image_t *image = container_of(element, gui_image_t, element);
 	int copy_width = MIN(element->area.size.x - source_offset->x, destination_size->x);
 	int copy_height = MIN(element->area.size.y - source_offset->y, destination_size->y);
 	unsigned int y;
 
-	ESP_LOGI(TAG, "Rendering image from [%d, %d] to [%d, %d]...", source_offset->x, source_offset->y, destination_size->x, destination_size->y);
+	ESP_LOGD(TAG, "Rendering image from [%d, %d] to [%d, %d]...", source_offset->x, source_offset->y, destination_size->x, destination_size->y);
 
 	for (y = 0; y < copy_height; y++) {
 		gui_pixel_t *dst = &fb->pixels[y * fb->stride];
-		const uint8_t *src = &image->image_data_start[image->element.area.size.x * (y + source_offset->y)];
+		const uint8_t *src = &image->image_data_start[image->element.area.size.x * (y + source_offset->y) + source_offset->x];
 
 		memcpy(dst, src, copy_width * sizeof(gui_pixel_t));
 	}
+
+	return -1;
 }
 
 static const gui_element_ops_t gui_image_ops = {
@@ -324,7 +346,8 @@ static void gui_fb_memset(const gui_fb_t *fb, gui_pixel_t color, const gui_point
 	}
 }
 
-void gui_render(gui_t *gui, gui_pixel_t *fb, unsigned int stride, const gui_point_t *size) {
+int gui_render(gui_t *gui, gui_pixel_t *fb, unsigned int stride, const gui_point_t *size) {
+	int ret;
 	const gui_point_t offset = { 0, 0 };
 	gui_fb_t gui_fb = {
 		.pixels = fb,
@@ -332,8 +355,9 @@ void gui_render(gui_t *gui, gui_pixel_t *fb, unsigned int stride, const gui_poin
 	};
 
 	gui_fb_memset(&gui_fb, GUI_COLOR_BLACK, size);
-	gui_container_render(&gui->container.element, &offset, &gui_fb, size);
+	ret = gui_container_render(&gui->container.element, &offset, &gui_fb, size);
 	gui->container.element.dirty = false;
+	return ret;
 }
 
 static void gui_check_render(gui_element_t *element) {
@@ -367,12 +391,12 @@ void gui_unlock(gui_t *gui) {
 	xSemaphoreGive(gui->lock);
 }
 
-static void gui_rectangle_render(gui_element_t *element, const gui_point_t *source_offset, const gui_fb_t *fb, const gui_point_t *destination_size) {
+static int gui_rectangle_render(gui_element_t *element, const gui_point_t *source_offset, const gui_fb_t *fb, const gui_point_t *destination_size) {
 	gui_rectangle_t *rect = container_of(element, gui_rectangle_t, element);
 	int width = MIN(element->area.size.x - source_offset->x, destination_size->x);
 	int height = MIN(element->area.size.y - source_offset->y, destination_size->y);
 
-	ESP_LOGI(TAG, "Rendering rectangle from [%d, %d] to [%d, %d]...", source_offset->x, source_offset->y, destination_size->x, destination_size->y);
+	ESP_LOGD(TAG, "Rendering rectangle from [%d, %d] to [%d, %d]...", source_offset->x, source_offset->y, destination_size->x, destination_size->y);
 
 	if (rect->filled) {
 		gui_point_t fill_size = {
@@ -417,6 +441,8 @@ static void gui_rectangle_render(gui_element_t *element, const gui_point_t *sour
 			}
 		}
 	}
+
+	return -1;
 }
 
 static const gui_element_ops_t gui_rectangle_ops = {
