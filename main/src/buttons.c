@@ -17,10 +17,10 @@
 
 #define GPIO_DEBOUNCE_INTERVAL_MS	 10
 
-#define GPIO_BUTTON_UP		 	  4
-#define GPIO_BUTTON_DOWN	 	  5
-#define GPIO_BUTTON_ENTER	 	  6
-#define GPIO_BUTTON_EXIT_PWR	 	  7
+#define GPIO_BUTTON_UP		 	  5
+#define GPIO_BUTTON_DOWN	 	  6
+#define GPIO_BUTTON_ENTER	 	 12
+#define GPIO_BUTTON_EXIT_PWR	 	 17
 
 #define GPIO_EVENT_QUEUE_LENGTH		128
 
@@ -81,7 +81,7 @@ static const button_def_t buttons[] = {
 	},
 	{
 		.gpio = GPIO_BUTTON_EXIT_PWR,
-		.active_low = true,
+		.active_low = false,
 		.function = BUTTON_EXIT,
 	}
 };

@@ -23,11 +23,12 @@
 #include "settings.h"
 #include "webserver.h"
 
-#define GPIO_SPI_MOSI	11
-#define GPIO_SPI_CLK	12
-#define GPIO_OLED_DC	10
-#define GPIO_OLED_RST	 9
-#define GPIO_OLED_CS	46
+#define GPIO_SPI_MOSI	36
+#define GPIO_SPI_CLK	33
+#define GPIO_OLED_DC	34
+#define GPIO_OLED_RST	21
+#define GPIO_OLED_CS	18
+#define GPIO_OLED_VCC	14
 
 #define SPI_OLED_HOST	SPI2_HOST
 
@@ -267,6 +268,7 @@ void app_main(void)
 	// Setup GPIOs
 	gpio_set_direction(GPIO_OLED_DC, GPIO_MODE_OUTPUT);
 	gpio_set_direction(GPIO_OLED_RST, GPIO_MODE_OUTPUT);
+	gpio_set_direction(GPIO_OLED_VCC, GPIO_MODE_OUTPUT);
 
 	// Initialize SPI bus
 	ret = spi_bus_initialize(SPI_OLED_HOST, &buscfg, SPI_DMA_CH_AUTO);
@@ -276,6 +278,9 @@ void app_main(void)
 	ESP_ERROR_CHECK(ret);
 	// Initialize LCD
 	oled_init(spidev);
+
+	// Power up display
+	gpio_set_level(GPIO_OLED_VCC, 1);
 
 	// Setup settings in NVS
 	settings_init();
