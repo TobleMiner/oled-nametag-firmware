@@ -1,6 +1,7 @@
 #include "menutree.h"
 
 #include "embedded_files.h"
+#include "gifplayer.h"
 
 // Root
 static gui_container_t menutree_root_gui_container;
@@ -56,7 +57,8 @@ static menu_entry_app_t menutree_root_applications_gif_player = {
 		.name = "gifplayer",
 		.parent = &menutree_root_applications,
 		.gui_element = &menutree_gifplayer_gui_image.element
-	}
+	},
+	.run = gifplayer_run
 };
 
 // Root menu - Settings - WLAN Settings
