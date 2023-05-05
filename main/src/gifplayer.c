@@ -120,7 +120,7 @@ static void gifplayer_frame_played(void) {
 static void switch_to_first_animation_(void) {
 	const char *first_animation = gifplayer_get_first_animation_name_();
 
-	ESP_LOGI(TAG, "Selecting first animation '%s': %d", first_animation, gifplayer_set_animation_relative_(first_animation));
+	ESP_LOGI(TAG, "Selecting first animation '%s': %d", STR_NULL(first_animation), gifplayer_set_animation_relative_(first_animation));
 }
 
 void gifplayer_init(gui_t *gui) {
