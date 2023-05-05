@@ -17,6 +17,7 @@
 #include "dirent_cache.h"
 #include "futil.h"
 #include "gui_priv.h"
+#include "settings.h"
 #include "util.h"
 
 static const char *TAG = "gifplayer";
@@ -24,6 +25,7 @@ static const char *TAG = "gifplayer";
 static gui_gifplayer_t gifplayer;
 static gui_pixel_t render_fb[256 * 64];
 static char *current_animation_path = NULL;
+static bool has_animation_changed = false;
 static gui_t *gui_root;
 
 static dirent_cache_t animation_dirent_cache;
@@ -56,6 +58,71 @@ static bool on_button_event(const button_event_t *event, void *priv) {
 	return false;
 }
 
+static int gifplayer_load_animation_(void) {
+	int err = gui_gifplayer_load_animation_from_file(&gifplayer, current_animation_path);
+	if (err) {
+		ESP_LOGE(TAG, "Failed to open GIF file '%s': %d", current_animation_path, err);
+		free(current_animation_path);
+		current_animation_path = NULL;
+	}
+
+	return err;
+}
+
+static int gifplayer_set_animation__(const char *path, const char *dir_prefix) {
+	gui_lock(gui_root);
+	if (current_animation_path) {
+		gui_gifplayer_load_animation_from_file(&gifplayer, NULL);
+		free(current_animation_path);
+		current_animation_path = NULL;
+	}
+
+	if (path) {
+		int err;
+
+		if (dir_prefix) {
+			current_animation_path = futil_path_concat(path, dir_prefix);
+		} else {
+			current_animation_path = strdup(path);
+		}
+		if (!current_animation_path) {
+			gui_unlock(gui_root);
+			return -ENOMEM;
+		}
+
+		err = gifplayer_load_animation_();
+		if (err) {
+			gui_unlock(gui_root);
+			return err;
+		}
+		has_animation_changed = true;
+	}
+
+	gui_unlock(gui_root);
+	return 0;
+}
+
+static int gifplayer_set_animation_relative_(const char *path) {
+	return gifplayer_set_animation__(path, GIFPLAYER_BASE_DIR);
+}
+
+static void gifplayer_frame_played(void) {
+	if (has_animation_changed) {
+		gifplayer_lock();
+		has_animation_changed = false;
+		if (current_animation_path) {
+			settings_set_default_animation(current_animation_path);
+		}
+		gifplayer_unlock();
+	}
+}
+
+static void switch_to_first_animation_(void) {
+	const char *first_animation = gifplayer_get_first_animation_name_();
+
+	ESP_LOGI(TAG, "Selecting first animation '%s': %d", first_animation, gifplayer_set_animation_relative_(first_animation));
+}
+
 void gifplayer_init(gui_t *gui) {
 	button_event_handler_multi_user_cfg_t button_event_cfg = {
 		.base = {
@@ -80,8 +147,16 @@ void gifplayer_init(gui_t *gui) {
 
 	gui_root = gui;
 	gui_gifplayer_init(&gifplayer, render_fb);
+	gifplayer.frame_played_cb = gifplayer_frame_played;
 	gui_element_set_size(&gifplayer.element, 256, 64);
 	gui_element_add_child(&gui->container.element, &gifplayer.element);
+
+	current_animation_path = settings_get_default_animation();
+	ESP_LOGI(TAG, "Default animation: %s", STR_NULL(current_animation_path));
+	if (!current_animation_path || gifplayer_load_animation_()) {
+		ESP_LOGI(TAG, "Can not load default animation, using first one available");
+		switch_to_first_animation_();
+	}
 
 	buttons_register_multi_button_event_handler(&button_event_handler, &button_event_cfg);
 }
@@ -107,47 +182,8 @@ bool gifplayer_is_animation_playing(void) {
 	return current_animation_path != NULL;
 }
 
-static int gifplayer_set_animation__(const char *path, const char *dir_prefix) {
-	gui_lock(gui_root);
-	if (current_animation_path) {
-		gui_gifplayer_load_animation_from_file(&gifplayer, NULL);
-		free(current_animation_path);
-		current_animation_path = NULL;
-	}
-
-	if (path) {
-		int err;
-
-		if (dir_prefix) {
-			current_animation_path = futil_path_concat(path, dir_prefix);
-		} else {
-			current_animation_path = strdup(path);
-		}
-		if (!current_animation_path) {
-			gui_unlock(gui_root);
-			return -ENOMEM;
-		}
-
-		err = gui_gifplayer_load_animation_from_file(&gifplayer, current_animation_path);
-		if (err) {
-			ESP_LOGE(TAG, "Failed to open GIF file '%s': %d", current_animation_path, err);
-			free(current_animation_path);
-			current_animation_path = NULL;
-			gui_unlock(gui_root);
-			return err;
-		}
-	}
-
-	gui_unlock(gui_root);
-	return 0;
-}
-
 int gifplayer_set_animation_(const char *path) {
 	return gifplayer_set_animation__(path, NULL);
-}
-
-int gifplayer_set_animation_relative_(const char *path) {
-	return gifplayer_set_animation__(path, GIFPLAYER_BASE_DIR);
 }
 
 int gifplayer_set_animation(const char *path) {
@@ -175,12 +211,6 @@ int gifplayer_update_available_animations(void) {
 	err = gifplayer_update_available_animations_();
 	gifplayer_unlock();
 	return err;
-}
-
-static void switch_to_first_animation_(void) {
-	const char *first_animation = gifplayer_get_first_animation_name_();
-
-	gifplayer_set_animation_relative_(first_animation);
 }
 
 const char *get_next_animation_name_(const char *animation_name) {
@@ -274,6 +304,10 @@ static int gui_gifplayer_render(gui_element_t *element, const gui_point_t *sourc
 		} else {
 			player->next_frame_deadline_us = -1;
 		}
+
+		if (player->frame_played_cb) {
+			player->frame_played_cb();
+		}
 	}
 
 	for (y = 0; y < copy_height; y++) {
@@ -299,6 +333,7 @@ gui_element_t *gui_gifplayer_init(gui_gifplayer_t *player, gui_pixel_t *render_f
 	player->render_fb = render_fb;
 	player->animation_loaded = false;
 	player->next_frame_deadline_us = 0;
+	player->frame_played_cb = NULL;
 	return gui_element_init(&player->element, &gui_gifplayer_ops);
 }
 

@@ -390,11 +390,6 @@ void app_main(void)
 	oled_write_image(spidev, oled_fb, 0);
 	oled_write_image(spidev, oled_fb, 1);
 
-	// Load default animation
-	char *current_default_animation = settings_get_default_animation();
-	ESP_LOGI(TAG, "Default animation: %s", STR_NULL(current_default_animation));
-	gifplayer_set_animation_(current_default_animation);
-
 	// Start polling input
 	ESP_ERROR_CHECK(xTaskCreate(button_emulator_event_loop, "button_emulator_event_loop", 4096, NULL, 10, NULL) != pdPASS);
 

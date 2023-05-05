@@ -49,6 +49,7 @@ typedef struct gui_gifplayer {
 	bool animation_loaded;
 	GIFIMAGE animation;
 	gui_pixel_t *render_fb;
+	void (*frame_played_cb)(void);
 } gui_gifplayer_t;
 
 gui_element_t *gui_gifplayer_init(gui_gifplayer_t *player, gui_pixel_t *render_fb);
