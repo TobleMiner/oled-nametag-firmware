@@ -36,12 +36,19 @@ typedef struct menu_entry_app {
 	void *priv;
 } menu_entry_app_t;
 
+typedef struct menu_cbs {
+	void (*on_app_entry)(const menu_t *menu, const menu_entry_app_t *app, void *ctx);
+	void (*on_app_exit)(const menu_t *menu, void *ctx);
+} menu_cbs_t;
+
 struct menu {
 	gui_element_t *gui_root;
 	menu_entry_submenu_t *root;
 	menu_entry_t *selected_entry;
 	bool in_app;
 	button_event_handler_t button_event_handler;
+	void *cb_ctx;
+	const menu_cbs_t *cbs;
 };
 
 void menu_init(menu_t *menu, menu_entry_submenu_t *root, gui_element_t *gui_root);
@@ -51,3 +58,5 @@ void menu_entry_submenu_add_entry(menu_entry_submenu_t *submenu, menu_entry_t *e
 void menu_setup_gui(menu_t *menu, gui_container_t *gui_root);
 void menu_show(menu_t *menu);
 void menu_hide(menu_t *menu);
+menu_entry_app_t *menu_find_app_by_name(menu_t *menu, const char *name);
+void menu_set_app_active(menu_t *menu, menu_entry_app_t *app);

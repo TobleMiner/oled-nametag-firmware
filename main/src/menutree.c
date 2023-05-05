@@ -1,7 +1,12 @@
 #include "menutree.h"
 
+#include <esp_log.h>
+
 #include "embedded_files.h"
 #include "gifplayer.h"
+#include "settings.h"
+
+const char *TAG = "menutree";
 
 // Root
 static gui_container_t menutree_root_gui_container;
@@ -186,11 +191,43 @@ static void menu_element_init(void) {
 
 static menu_t menutree_menu;
 
+static void on_app_entry(const menu_t *menu, const menu_entry_app_t *app, void *ctx) {
+	if (!app->base.name) {
+		ESP_LOGW(TAG, "App does not have a name, can't store state");
+	}
+	settings_set_default_app(app->base.name);
+}
+
+static void on_app_exit(const menu_t *menu, void *ctx) {
+	settings_set_default_app(NULL);
+}
+
+static const menu_cbs_t menu_cbs = {
+	.on_app_entry = on_app_entry,
+	.on_app_exit = on_app_exit
+};
+
 menu_t *menutree_init(gui_container_t *gui_root) {
+	char *default_app_name;
+
 	gui_element_init(gui_root);
 	menu_element_init();
 	menu_init(&menutree_menu, &menutree_root, &menutree_root_gui_container.element);
+	menutree_menu.cbs = &menu_cbs;
 	menu_setup_gui(&menutree_menu, &menutree_list_gui_container);
+
+	default_app_name = settings_get_default_app();
+	ESP_LOGI(TAG, "Default application: %s", STR_NULL(default_app_name));
+	if (default_app_name) {
+		menu_entry_app_t *app;
+
+		app = menu_find_app_by_name(&menutree_menu, default_app_name);
+		if (app) {
+			menu_set_app_active(&menutree_menu, app);
+		}
+		free(default_app_name);
+	}
+
 	return &menutree_menu;
 }
 

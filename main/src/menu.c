@@ -1,6 +1,8 @@
 #include "menu.h"
 
 #include <stdbool.h>
+#include <string.h>
+
 #include <esp_log.h>
 
 #include "util.h"
@@ -45,9 +47,30 @@ static void app_exit_cb(void *cb_ctx) {
 	menu_t *menu = cb_ctx;
 
 	if (menu->in_app) {
+		ESP_LOGI(TAG, "Returning from app");
 		menu->in_app = false;
+		if (menu->cbs && menu->cbs->on_app_exit) {
+			menu->cbs->on_app_exit(menu, menu->cb_ctx);
+		}
 		menu_show(menu);
 	}
+}
+
+static int enter_app(menu_t *menu, menu_entry_app_t *entry_app) {
+	int err;
+
+	ESP_LOGI(TAG, "Starting application");
+	menu_hide(menu);
+	menu->in_app = true;
+	err = entry_app->run(app_exit_cb, menu, entry_app->priv);
+	if (menu->cbs && menu->cbs->on_app_entry) {
+		menu->cbs->on_app_entry(menu, entry_app, menu->cb_ctx);
+	}
+	if (err) {
+		ESP_LOGE(TAG, "Application startup failed: %d", err);
+		app_exit_cb(menu);
+	}
+	return err;
 }
 
 static bool on_button_event(const button_event_t *event, void *priv) {
@@ -90,18 +113,8 @@ static bool on_button_event(const button_event_t *event, void *priv) {
 
 		if (selected_entry->type == MENU_ENTRY_APP) {
 			menu_entry_app_t *entry_app = container_of(selected_entry, menu_entry_app_t, base);
-			// TODO: support starting an application
 			if (!menu->in_app) {
-				int err;
-
-				ESP_LOGI(TAG, "Starting application");
-				menu_hide(menu);
-				menu->in_app = true;
-				err = entry_app->run(app_exit_cb, menu, entry_app->priv);
-				if (err) {
-					ESP_LOGE(TAG, "Application startup failed: %d", err);
-					app_exit_cb(menu);
-				}
+				enter_app(menu, entry_app);
 				return true;
 			}
 		}
@@ -126,6 +139,9 @@ static bool on_button_event(const button_event_t *event, void *priv) {
 void menu_init(menu_t *menu, menu_entry_submenu_t *root, gui_element_t *gui_root) {
 	menu->root = root;
 	menu->gui_root = gui_root;
+	menu->selected_entry = NULL;
+	menu->in_app = false;
+	menu->cbs = NULL;
 
 	button_event_handler_multi_user_cfg_t button_event_cfg = {
 		.base = {
@@ -195,16 +211,27 @@ void menu_setup_gui(menu_t *menu, gui_container_t *container) {
 void menu_show(menu_t *menu) {
 	if (!menu->selected_entry) {
 		menu->selected_entry = menu_find_first_entry(menu->root);
+		menu->in_app = false;
 	}
 
 	if (menu->selected_entry) {
 		menu_entry_t *active_entry = menu->selected_entry;
 		menu_entry_submenu_t *parent = active_entry->parent;
 
+		if (menu->in_app) {
+			menu_entry_app_t *entry_app = container_of(active_entry, menu_entry_app_t, base);
+
+			if (!enter_app(menu, entry_app)) {
+				// We have entered an app, menu shall not be shown
+				return;
+			}
+		}
+
 		ESP_LOGI(TAG, "Unhiding %s", STR_NULL(parent->base.name));
 		gui_list_set_selected_entry(parent->gui_list, active_entry->gui_element);
 		gui_element_set_hidden(&parent->gui_list->container.element, false);
 	}
+
 	gui_element_show(menu->gui_root);
 	gui_element_set_hidden(menu->gui_root, false);
 	buttons_enable_event_handler(&menu->button_event_handler);
@@ -213,4 +240,41 @@ void menu_show(menu_t *menu) {
 void menu_hide(menu_t *menu) {
 	buttons_disable_event_handler(&menu->button_event_handler);
 	gui_element_set_hidden(menu->gui_root, true);
+}
+
+static menu_entry_app_t *menu_find_app_by_name_submenu(const char *name, menu_entry_submenu_t *submenu);
+static menu_entry_app_t *menu_find_app_by_name_submenu(const char *name, menu_entry_submenu_t *submenu) {
+	menu_entry_t *cursor;
+
+	LIST_FOR_EACH_ENTRY(cursor, &submenu->entries, list) {
+		if (cursor->type == MENU_ENTRY_SUBMENU) {
+			menu_entry_submenu_t *entry_submenu = container_of(cursor, menu_entry_submenu_t, base);
+			menu_entry_app_t *entry = menu_find_app_by_name_submenu(name, entry_submenu);
+
+			if (entry) {
+				return entry;
+			}
+		} else if (cursor->type == MENU_ENTRY_APP) {
+			menu_entry_app_t *entry_app = container_of(cursor, menu_entry_app_t, base);
+
+			if (entry_app->base.name && !strcmp(entry_app->base.name, name)) {
+				return entry_app;
+			}
+		}
+	}
+
+	return NULL;
+}
+
+menu_entry_app_t *menu_find_app_by_name(menu_t *menu, const char *name) {
+	if (!name) {
+		return NULL;
+	}
+
+	return menu_find_app_by_name_submenu(name, menu->root);
+}
+
+void menu_set_app_active(menu_t *menu, menu_entry_app_t *app) {
+	menu->selected_entry = &app->base;
+	menu->in_app = true;
 }

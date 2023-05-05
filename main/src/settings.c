@@ -101,3 +101,12 @@ void settings_set_default_animation(const char *str) {
 char *settings_get_default_animation(void) {
 	return nvs_get_string("DefAnimFile");
 }
+
+void settings_set_default_app(const char *app) {
+	nvs_set_string("DefApp", app);
+}
+
+char *settings_get_default_app(void) {
+	return nvs_get_string("DefApp");
+}
+
