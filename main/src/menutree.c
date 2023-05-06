@@ -5,6 +5,7 @@
 #include "embedded_files.h"
 #include "gifplayer.h"
 #include "settings.h"
+#include "wlan_settings.h"
 
 const char *TAG = "menutree";
 
@@ -67,13 +68,37 @@ static menu_entry_app_t menutree_root_applications_gif_player = {
 };
 
 // Root menu - Settings - WLAN Settings
+static gui_list_t menutree_wlan_settings_gui_list;
 static gui_image_t menutree_wlan_settings_gui_image;
-static menu_entry_app_t menutree_root_settings_wlan_settings = {
+static menu_entry_submenu_t menutree_root_settings_wlan_settings = {
 	.base = {
 		.name = "wlan",
 		.parent = &menutree_root_settings,
 		.gui_element = &menutree_wlan_settings_gui_image.element
-	}
+	},
+	.gui_list = &menutree_wlan_settings_gui_list
+};
+
+// Root menu - Settings - WLAN Settings - AP info
+static gui_image_t menutree_apinfo_gui_image;
+static menu_entry_app_t menutree_root_settings_wlan_settings_ap_info = {
+	.base = {
+		.name = "apinfo",
+		.parent = &menutree_root_settings_wlan_settings,
+		.gui_element = &menutree_apinfo_gui_image.element
+	},
+	.run = wlan_settings_run
+};
+
+// Root menu - Settings - WLAN Settings - Enable/Disable AP
+static gui_image_t menutree_endisable_ap_gui_image;
+static menu_entry_app_t menutree_root_settings_wlan_settings_endisable_ap = {
+	.base = {
+		.name = "endisableap",
+		.parent = &menutree_root_settings_wlan_settings,
+		.gui_element = &menutree_endisable_ap_gui_image.element
+	},
+	.run = wlan_ap_endisable_run
 };
 
 // Vertical separator
@@ -108,7 +133,6 @@ static void gui_element_init(gui_container_t *root) {
 
 	// Root list
 	gui_list_init(&menutree_root_gui_list);
-//	gui_element_add_child(&menutree_root_gui_container.element, &menutree_root_gui_list.container.element);
 	gui_element_set_size(&menutree_root_gui_list.container.element, MENU_LIST_WIDTH, MENU_LIST_HEIGHT);
 
 	// Root menu - Applications
@@ -130,7 +154,16 @@ static void gui_element_init(gui_container_t *root) {
 	gui_image_init(&menutree_gifplayer_gui_image, 119, 22, EMBEDDED_FILE_PTR(gif_player_119x22_raw));
 
 	// Root menu - Settings - WLAN Settings
+	gui_list_init(&menutree_wlan_settings_gui_list);
+	gui_element_set_size(&menutree_wlan_settings_gui_list.container.element, MENU_LIST_WIDTH, MENU_LIST_HEIGHT);
 	gui_image_init(&menutree_wlan_settings_gui_image, 119, 22, EMBEDDED_FILE_PTR(wlan_settings_119x22_raw));
+
+	// Root menu - Settings - WLAN Settings - AP info
+	gui_image_init(&menutree_apinfo_gui_image, 119, 22, EMBEDDED_FILE_PTR(ap_info_119x22_raw));
+
+	// Root menu - Settings - WLAN Settings - Enable/Disable AP
+	gui_image_init(&menutree_endisable_ap_gui_image, 119, 22, EMBEDDED_FILE_PTR(enable_ap_119x22_raw));
+	gui_element_set_position(&menutree_endisable_ap_gui_image.element, 0, 22);
 
 	// Vertical separator
 	gui_rectangle_init(&menutree_vertical_separator);
@@ -185,8 +218,16 @@ static void menu_element_init(void) {
 	menu_entry_submenu_add_entry(&menutree_root_applications, &menutree_root_applications_gif_player.base);
 
 	// Root menu - Settings - WLAN Settings
-	menu_entry_app_init(&menutree_root_settings_wlan_settings);
+	menu_entry_submenu_init(&menutree_root_settings_wlan_settings);
 	menu_entry_submenu_add_entry(&menutree_root_settings, &menutree_root_settings_wlan_settings.base);
+
+	// Root menu - Settings - WLAN Settings - AP info
+	menu_entry_app_init(&menutree_root_settings_wlan_settings_ap_info);
+	menu_entry_submenu_add_entry(&menutree_root_settings_wlan_settings, &menutree_root_settings_wlan_settings_ap_info.base);
+
+	// Root menu - Settings - WLAN Settings - Enable/Disable AP
+	menu_entry_app_init(&menutree_root_settings_wlan_settings_endisable_ap);
+	menu_entry_submenu_add_entry(&menutree_root_settings_wlan_settings, &menutree_root_settings_wlan_settings_endisable_ap.base);
 }
 
 static menu_t menutree_menu;

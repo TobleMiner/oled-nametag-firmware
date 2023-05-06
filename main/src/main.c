@@ -380,6 +380,9 @@ void app_main(void)
 	// Setup gifplayer
 	gifplayer_init(&gui);
 
+	// Setup wifi settings
+	wlan_settings_init(&gui);
+
 	// Setup menu
 	menu = menutree_init(&gui.container);
 	menu_show(menu);
