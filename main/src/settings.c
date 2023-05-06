@@ -94,6 +94,32 @@ static void nvs_set_string(const char *key, const char *value) {
 	}
 }
 
+static bool nvs_get_bool(const char *key, bool default_value) {
+	esp_err_t err;
+	uint8_t val;
+
+	key = ellipsize_key(key);
+	err = nvs_get_u8(nvs, key, &val);
+	if (err) {
+		if (err != ESP_ERR_NVS_NOT_FOUND) {
+			ESP_LOGE(TAG, "Failed to load bool '%s' from NVS: %d", key, err);
+		}
+		return default_value;
+	}
+
+	return !!val;
+}
+
+static void nvs_set_bool(const char *key, bool value) {
+	esp_err_t err;
+
+	key = ellipsize_key(key);
+	err = nvs_set_u8(nvs, key, value ? 1 : 0);
+	if (err) {
+		ESP_LOGE(TAG, "Failed to store bool '%s' to NVS: %d", key, err);
+	}
+}
+
 void settings_set_default_animation(const char *str) {
 	nvs_set_string("DefAnimFile", str);
 }
@@ -110,3 +136,18 @@ char *settings_get_default_app(void) {
 	return nvs_get_string("DefApp");
 }
 
+void settings_set_wlan_ap_psk(const char *app) {
+	nvs_set_string("WlanApPsk", app);
+}
+
+char *settings_get_wlan_ap_psk(void) {
+	return nvs_get_string("WlanApPsk");
+}
+
+void settings_set_wlan_ap_enable(bool enable) {
+	nvs_set_bool("WlanApEn", enable);
+}
+
+bool settings_get_wlan_ap_enable(void) {
+	return nvs_get_bool("WlanApEn", true);
+}
