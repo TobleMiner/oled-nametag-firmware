@@ -38,11 +38,11 @@ static char *wlan_ap_psk = NULL;
 static bool wlan_ap_active = false;
 
 void wlan_ap_lock(void) {
-	xSemaphoreTake(ap_lock, portMAX_DELAY);
+	xSemaphoreTakeRecursive(ap_lock, portMAX_DELAY);
 }
 
 void wlan_ap_unlock(void) {
-	xSemaphoreGive(ap_lock);
+	xSemaphoreGiveRecursive(ap_lock);
 }
 
 static void generate_psk(char *dst, size_t len) {
@@ -132,7 +132,7 @@ static void disable_ap_(void) {
 }
 
 void wlan_ap_init(void) {
-	ap_lock = xSemaphoreCreateMutexStatic(&ap_lock_buffer);
+	ap_lock = xSemaphoreCreateRecursiveMutexStatic(&ap_lock_buffer);
 
 	wlan_ap_iface = esp_netif_create_default_wifi_ap();
 	ESP_ERROR_CHECK(!wlan_ap_iface);
