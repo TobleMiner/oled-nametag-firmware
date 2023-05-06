@@ -14,6 +14,7 @@
 #include <lwip/err.h>
 #include <lwip/sys.h>
 
+#include "event_bus.h"
 #include "settings.h"
 
 #define PSK_LENGTH 10
@@ -121,11 +122,13 @@ static void enable_ap_(void) {
 	} else {
 		ESP_LOGE(TAG, "Can not enable AP, PSK not populated");
 	}
+	event_bus_notify("wlan_ap", NULL);
 }
 
 static void disable_ap_(void) {
 	esp_wifi_stop();
 	wlan_ap_active = false;
+	event_bus_notify("wlan_ap", NULL);
 }
 
 void wlan_ap_init(void) {
