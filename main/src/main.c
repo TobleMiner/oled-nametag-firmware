@@ -388,7 +388,7 @@ void app_main(void)
 	wlan_settings_init(&gui);
 
 	// Setup menu
-	menu = menutree_init(&gui.container);
+	menu = menutree_init(&gui.container, &gui);
 	menu_show(menu);
 
 	// Setup webserver

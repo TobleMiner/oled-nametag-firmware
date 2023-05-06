@@ -3,8 +3,10 @@
 #include <esp_log.h>
 
 #include "embedded_files.h"
+#include "event_bus.h"
 #include "gifplayer.h"
 #include "settings.h"
+#include "wlan_ap.h"
 #include "wlan_settings.h"
 
 const char *TAG = "menutree";
@@ -115,6 +117,26 @@ static gui_image_t menutree_battery_gui_image;
 
 // Battery SoC
 static gui_rectangle_t menutree_battery_soc_gui_rect;
+
+// UI update events
+static event_bus_handler_t wlan_event_handler;
+
+static void apply_wlan_ap_state(void) {
+	bool wlan_ap_active = wlan_ap_is_enabled();
+
+	// Update enable/disable menu entry
+	gui_image_set_image(&menutree_endisable_ap_gui_image, 119, 22, wlan_ap_active ? EMBEDDED_FILE_PTR(disable_ap_119x22_raw) : EMBEDDED_FILE_PTR(enable_ap_119x22_raw));
+	// Update indicator icon
+	gui_element_set_hidden(&menutree_wlan_ap_gui_image.element, !wlan_ap_active);
+}
+
+void on_wlan_ap_event(void *priv, void *data) {
+	gui_t *gui = priv;
+
+	gui_lock(gui);
+	apply_wlan_ap_state();
+	gui_unlock(gui);
+}
 
 #define MENU_LIST_WIDTH		144
 #define MENU_LIST_HEIGHT	 64
@@ -248,7 +270,7 @@ static const menu_cbs_t menu_cbs = {
 	.on_app_exit = on_app_exit
 };
 
-menu_t *menutree_init(gui_container_t *gui_root) {
+menu_t *menutree_init(gui_container_t *gui_root, gui_t *gui) {
 	char *default_app_name;
 
 	gui_element_init(gui_root);
@@ -268,6 +290,9 @@ menu_t *menutree_init(gui_container_t *gui_root) {
 		}
 		free(default_app_name);
 	}
+
+	event_bus_subscribe(&wlan_event_handler, "wlan_ap", on_wlan_ap_event, gui);
+	apply_wlan_ap_state();
 
 	return &menutree_menu;
 }
