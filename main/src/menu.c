@@ -67,7 +67,9 @@ static int enter_app(menu_t *menu, menu_entry_app_t *entry_app) {
 		menu->cbs->on_app_entry(menu, entry_app, menu->cb_ctx);
 	}
 	if (err) {
-		ESP_LOGE(TAG, "Application startup failed: %d", err);
+		if (err < 0) {
+			ESP_LOGE(TAG, "Application startup failed: %d", err);
+		}
 		app_exit_cb(menu);
 	}
 	return err;
