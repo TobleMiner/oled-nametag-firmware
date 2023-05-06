@@ -15,6 +15,7 @@
 #include "api.h"
 #include "buttons.h"
 #include "embedded_files.h"
+#include "event_bus.h"
 #include "flash.h"
 #include "gifplayer.h"
 #include "gui.h"
@@ -284,6 +285,9 @@ void app_main(void)
 
 	// Power up display
 	gpio_set_level(GPIO_OLED_VCC, 1);
+
+	// Initialize event bus
+	event_bus_init();
 
 	// Setup NVS
 	nvs_init();
