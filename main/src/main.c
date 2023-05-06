@@ -19,9 +19,13 @@
 #include "gifplayer.h"
 #include "gui.h"
 #include "menutree.h"
+#include "nvs.h"
 #include "pixelflut/pixelflut.h"
 #include "settings.h"
 #include "webserver.h"
+#include "wlan_settings.h"
+#include "wlan.h"
+#include "wlan_ap.h"
 
 #define GPIO_SPI_MOSI	36
 #define GPIO_SPI_CLK	33
@@ -135,7 +139,6 @@ void wifi_main(void);
 
 static pixelflut_t pixelflut;
 static uint8_t oled_fb[8192] = { 0 };
-static uint8_t rgb888_fb[256 * 64 * 3];
 static uint8_t gui_render_fb[256 * 64];
 
 static inline unsigned int rgb_to_grayscale(const uint8_t *rgb) {
@@ -282,14 +285,20 @@ void app_main(void)
 	// Power up display
 	gpio_set_level(GPIO_OLED_VCC, 1);
 
+	// Setup NVS
+	nvs_init();
+
 	// Setup settings in NVS
 	settings_init();
 
+	// Setup WLAN
+	wlan_init();
+
+	// Setup WLAN AP
+	wlan_ap_init();
+
 	// Mount main fat storage
 	ESP_ERROR_CHECK(flash_fatfs_mount("flash", "/flash"));
-
-	// Setup WiFi
-	wifi_main();
 
 /*
 	gui_list_init(&gui_list_settings);
