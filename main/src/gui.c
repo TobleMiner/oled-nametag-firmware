@@ -516,3 +516,9 @@ void gui_list_set_selected_entry(gui_list_t *list, gui_element_t *entry) {
 	gui_element_invalidate(&list->container.element);
 	gui_element_check_render(&list->container.element);
 }
+
+void gui_image_set_image(gui_image_t *image, unsigned int width, unsigned int height, const uint8_t *image_data_start) {
+	image->image_data_start = image_data_start;
+	gui_element_set_size_(&image->element, width, height);
+	gui_element_check_render(&image->element);
+}

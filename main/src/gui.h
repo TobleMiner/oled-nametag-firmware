@@ -112,6 +112,7 @@ void gui_element_remove_child(gui_element_t *parent, gui_element_t *child);
 
 // GUI image widget API
 gui_element_t *gui_image_init(gui_image_t *image, unsigned int width, unsigned int height, const uint8_t *image_data_start);
+void gui_image_set_image(gui_image_t *image, unsigned int width, unsigned int height, const uint8_t *image_data_start);
 
 // GUI list widget API
 gui_element_t *gui_list_init(gui_list_t *list);
