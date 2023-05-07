@@ -129,13 +129,6 @@ static void oled_show_image(spi_device_handle_t spidev, unsigned int slot) {
 	}
 }
 
-const uint8_t image1[] =
-#include "image1.inc"
-;
-const uint8_t image2[] =
-#include "image2.inc"
-;
-
 void wifi_main(void);
 
 static pixelflut_t pixelflut;
