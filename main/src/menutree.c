@@ -130,7 +130,7 @@ static void apply_wlan_ap_state(void) {
 	gui_element_set_hidden(&menutree_wlan_ap_gui_image.element, !wlan_ap_active);
 }
 
-void on_wlan_ap_event(void *priv, void *data) {
+static void on_wlan_ap_event(void *priv, void *data) {
 	gui_t *gui = priv;
 
 	gui_lock(gui);
