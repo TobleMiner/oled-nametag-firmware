@@ -26,6 +26,7 @@
 #include "nvs.h"
 #include "pixelflut/pixelflut.h"
 #include "power.h"
+#include "scheduler.h"
 #include "settings.h"
 #include "webserver.h"
 #include "wlan_settings.h"
@@ -272,6 +273,9 @@ void app_main(void)
 
 	// Initialize charger readouts
 	charger_init();
+
+	// Setup scheduler
+	scheduler_init();
 
 	// Setup NVS
 	nvs_init();
