@@ -82,7 +82,7 @@ typedef struct gui_label {
 
 	const char *text;
 	unsigned int font_size;
-	unsigned int offset_x;
+	gui_point_t text_offset;
 } gui_label_t;
 
 typedef struct gui gui_t;
@@ -135,4 +135,4 @@ void gui_rectangle_set_color(gui_rectangle_t *rectangle, gui_pixel_t color);
 gui_element_t *gui_label_init(gui_label_t *label, const char *text);
 void gui_label_set_font_size(gui_label_t *label, unsigned int height);
 void gui_label_set_text(gui_label_t *label, const char *text);
-void gui_label_set_horizontal_text_offset(gui_label_t *label, unsigned int offset_x);
+void gui_label_set_text_offset(gui_label_t *label, unsigned int offset_x, unsigned int offset_y);

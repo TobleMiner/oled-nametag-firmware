@@ -465,8 +465,8 @@ static int gui_label_render(gui_element_t *element, const gui_point_t *source_of
 		.y = source_offset->y
 	};
 	int err;
-	unsigned int offset_x = label->offset_x;
-	unsigned int offset_y = 0;
+	unsigned int offset_x = label->text_offset.x;
+	unsigned int offset_y = label->text_offset.x;
 	font_text_params_t text_params;
 
 	if (!label->text) {
@@ -480,17 +480,12 @@ static int gui_label_render(gui_element_t *element, const gui_point_t *source_of
 
 	ESP_LOGI(TAG, "Size required to render string: %dx%d px", text_params.effective_size.x, text_params.effective_size.y);
 
-	if (text_params.effective_size.y < element->area.size.y) {
-		offset_y = (element->area.size.y - text_params.effective_size.y) / 2;
-
-		if (source_offset->y > offset_y) {
-			font_source_offset.y -= offset_y;
-			offset_y = 0;
-		} else {
-			offset_y -= source_offset->y;
-		}
+	if (source_offset->y > offset_y) {
+		font_source_offset.y -= offset_y;
+		offset_y = 0;
+	} else {
+		offset_y -= source_offset->y;
 	}
-
 	if (source_offset->x > offset_x) {
 		font_source_offset.x -= offset_x;
 		offset_x = 0;
@@ -519,7 +514,8 @@ gui_element_t *gui_label_init(gui_label_t *label, const char *text) {
 	gui_element_init(&label->element, &gui_label_ops);
 	label->font_size = 12;
 	label->text = text;
-	label->offset_x = 0;
+	label->text_offset.x = 0;
+	label->text_offset.y = 0;
 	return &label->element;
 }
 
@@ -604,8 +600,9 @@ void gui_label_set_text(gui_label_t *label, const char *text) {
 	gui_element_check_render(&label->element);
 }
 
-void gui_label_set_horizontal_text_offset(gui_label_t *label, unsigned int offset_x) {
-	label->offset_x = offset_x;
+void gui_label_set_text_offset(gui_label_t *label, unsigned int offset_x, unsigned int offset_y) {
+	label->text_offset.x = offset_x;
+	label->text_offset.y = offset_y;
 	gui_element_invalidate(&label->element);
 	gui_element_check_render(&label->element);
 }
