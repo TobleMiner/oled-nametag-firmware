@@ -80,3 +80,5 @@ ssize_t hex_decode_inplace(uint8_t *ptr, size_t len);
 esp_err_t xlate_err(int err);
 
 #define STR_NULL(s) ((s) ? (s) : "(NULL)")
+
+#define MS_TO_US(ms) ((ms) * 1000)

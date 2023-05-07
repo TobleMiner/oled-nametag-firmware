@@ -13,6 +13,7 @@
 #include "esp_timer.h"
 
 #include "api.h"
+#include "ambient_light_sensor.h"
 #include "buttons.h"
 #include "charger.h"
 #include "charging_screen.h"
@@ -22,6 +23,7 @@
 #include "fonts.h"
 #include "gifplayer.h"
 #include "gui.h"
+#include "i2c_bus.h"
 #include "menutree.h"
 #include "nvs.h"
 #include "pixelflut/pixelflut.h"
@@ -277,6 +279,10 @@ void app_main(void)
 	// Setup scheduler
 	scheduler_init();
 
+	// Initialize I2C bus
+	ESP_ERROR_CHECK(i2c_bus_init(I2C_NUM_0, 3, 2, 100000));
+	i2c_detect(I2C_NUM_0);
+
 	// Setup NVS
 	nvs_init();
 
@@ -320,6 +326,9 @@ void app_main(void)
 
 	// Setup charging screen
 	charging_screen_init(&gui, power_on_cb);
+
+	// Initialize ambient light sensor
+	ambient_light_sensor_init(&gui);
 
 	// Setup menu
 	menu = menutree_init(&gui.container, &gui);

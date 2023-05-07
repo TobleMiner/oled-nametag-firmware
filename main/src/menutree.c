@@ -4,6 +4,7 @@
 
 #include <esp_log.h>
 
+#include "ambient_light_sensor.h"
 #include "embedded_files.h"
 #include "event_bus.h"
 #include "gifplayer.h"
@@ -71,6 +72,17 @@ static menu_entry_app_t menutree_root_applications_gif_player = {
 		.gui_element = &menutree_gifplayer_gui_label.element
 	},
 	.run = gifplayer_run
+};
+
+// Root menu - Applications - Ambient light meter
+static gui_label_t menutree_ambient_light_meter_gui_label;
+static menu_entry_app_t menutree_root_applications_ambient_light_meter = {
+	.base = {
+		.name = "ambient_light_meter",
+		.parent = &menutree_root_applications,
+		.gui_element = &menutree_ambient_light_meter_gui_label.element
+	},
+	.run = ambient_light_sensor_run
 };
 
 // Root menu - Settings - WLAN Settings
@@ -191,7 +203,14 @@ static void gui_element_init(gui_container_t *root) {
 	gui_label_init(&menutree_gifplayer_gui_label, "GIF player");
 	gui_label_set_font_size(&menutree_gifplayer_gui_label, 15);
 	gui_label_set_text_offset(&menutree_gifplayer_gui_label, 3, 1);
-	gui_element_set_size(&menutree_gifplayer_gui_label.element, 119, 22);
+	gui_element_set_size(&menutree_gifplayer_gui_label.element, 132, 22);
+
+	// Root menu - Applications - Ambient light meter
+	gui_label_init(&menutree_ambient_light_meter_gui_label, "Ambient light");
+	gui_label_set_font_size(&menutree_ambient_light_meter_gui_label, 15);
+	gui_label_set_text_offset(&menutree_ambient_light_meter_gui_label, 3, 1);
+	gui_element_set_size(&menutree_ambient_light_meter_gui_label.element, 132, 22);
+	gui_element_set_position(&menutree_ambient_light_meter_gui_label.element, 0, 22);
 
 	// Root menu - Settings - WLAN Settings
 	gui_list_init(&menutree_wlan_settings_gui_list);
@@ -266,6 +285,10 @@ static void menu_element_init(void) {
 	// Root menu - Applications - GIF player
 	menu_entry_app_init(&menutree_root_applications_gif_player);
 	menu_entry_submenu_add_entry(&menutree_root_applications, &menutree_root_applications_gif_player.base);
+
+	// Root menu - Applications - Ambient light meter
+	menu_entry_app_init(&menutree_root_applications_ambient_light_meter);
+	menu_entry_submenu_add_entry(&menutree_root_applications, &menutree_root_applications_ambient_light_meter.base);
 
 	// Root menu - Settings - WLAN Settings
 	menu_entry_submenu_init(&menutree_root_settings_wlan_settings);
