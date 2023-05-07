@@ -13,6 +13,9 @@
 #define EMBEDDED_FILE_PTRS(name_) \
 	EMBEDDED_FILE_PTR(name_), EMBEDDED_FILE_PTR_END(name_)
 
+#define EMBEDDED_FILE_PTRS_SIZE(name_) \
+	EMBEDDED_FILE_PTR(name_), (EMBEDDED_FILE_PTR_END(name_) - EMBEDDED_FILE_PTR(name_))
+
 #define DECLARE_EMBEDDED_FILE(name_) \
 	extern const uint8_t binary_ ## name_ ## _start[] asm("_binary_"STR(name_)"_start"); \
 	extern const uint8_t binary_ ## name_ ## _end[] asm("_binary_"STR(name_)"_end")
@@ -44,3 +47,5 @@ DECLARE_EMBEDDED_FILE(please_wait_119x22_raw);
 DECLARE_EMBEDDED_FILE(ssid_37x12_raw);
 DECLARE_EMBEDDED_FILE(psk_31x12_raw);
 DECLARE_EMBEDDED_FILE(generate_psk_176x9_raw);
+
+DECLARE_EMBEDDED_FILE(droidsans_bold_ttf);
