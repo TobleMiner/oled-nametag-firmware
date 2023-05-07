@@ -14,6 +14,7 @@
 
 #include "api.h"
 #include "ambient_light_sensor.h"
+#include "battery_gauge.h"
 #include "buttons.h"
 #include "charger.h"
 #include "charging_screen.h"
@@ -329,6 +330,9 @@ void app_main(void)
 
 	// Initialize ambient light sensor
 	ambient_light_sensor_init(&gui);
+
+	// Initialize battery gauge
+	battery_gauge_init();
 
 	// Setup menu
 	menu = menutree_init(&gui.container, &gui);
