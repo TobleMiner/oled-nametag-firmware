@@ -19,9 +19,9 @@ static void *menu_cb_ctx;
 
 static gui_container_t wlan_settings_container;
 
-static gui_image_t wlan_ssid_image;
-static gui_image_t wlan_psk_image;
-static gui_image_t wlan_generate_psk_image;
+static gui_label_t wlan_ssid_label;
+static gui_label_t wlan_psk_label;
+static gui_label_t wlan_generate_psk_label;
 
 static gui_rectangle_t wlan_qr_code_border;
 static uint8_t wlan_qr_code_image_data[64 * 64];
@@ -35,11 +35,14 @@ static button_event_handler_t button_event_handler;
 
 static gui_container_t wait_modal_container;
 static gui_rectangle_t wait_modal_border;
-static gui_image_t wait_modal_image;
+static gui_label_t wait_modal_label;
 
 static gui_t *gui_root;
 
 static event_bus_handler_t wlan_event_handler;
+
+static char wlan_ap_ssid[128] = { 0 };
+static char wlan_ap_psk[128] = { 0 };
 
 static bool on_button_event(const button_event_t *event, void *priv) {
 	ESP_LOGI(TAG, "Button event");
@@ -67,12 +70,18 @@ static void wlan_encode_qrcode(void) {
 	bool success;
 	int size, y, iscale, scaled_size;
 	const char *ssid, *psk;
+	unsigned int ssid_offset = 0, ssid_len = 0;
+	unsigned int psk_offset = 0, psk_len = 0;
 
 	wlan_ap_lock();
 	ssid = wlan_ap_get_ssid_();
 	psk = wlan_ap_get_psk_();
 	if (ssid && psk) {
 		snprintf(wlan_encode_buffer, sizeof(wlan_encode_buffer), "WIFI:S:%s;T:WPA;P:%s;;", ssid, psk);
+		ssid_offset = 7;
+		ssid_len = strlen(ssid);
+		psk_offset = 7 + ssid_len + 9;
+		psk_len = strlen(psk);
 		ESP_LOGI(TAG, "QR-Code data: %s", wlan_encode_buffer);
 	} else {
 		ESP_LOGE(TAG, "WLAN SSID (%s) or PSK (%s) not set", STR_NULL(ssid), STR_NULL(psk));
@@ -83,7 +92,7 @@ static void wlan_encode_qrcode(void) {
 				       qrcode_data, qrcodegen_Ecc_MEDIUM, qrcodegen_VERSION_MIN,
 				       11, qrcodegen_Mask_AUTO, true);
 	if (!success) {
-		ESP_LOGE(TAG, "Failed to generate WiFi QR-Code");
+		ESP_LOGE(TAG, "Failed to generate WLAN QR-Code");
 		return;
 	}
 
@@ -120,8 +129,14 @@ static void wlan_encode_qrcode(void) {
 	gui_element_set_position(&wlan_qr_code_image.element, 256 - 64 + (64 - scaled_size) / 2, (64 - scaled_size) / 2);
 	gui_element_set_size(&wlan_qr_code_border.element, scaled_size + 2, scaled_size + 2);
 	gui_element_set_position(&wlan_qr_code_border.element, 256 - 64 + (64 - scaled_size) / 2 - 1, (64 - scaled_size) / 2 - 1);
+
+	snprintf(wlan_ap_ssid, sizeof(wlan_ap_ssid), "SSID: %.*s", ssid_len, &wlan_encode_buffer[ssid_offset]);
+	gui_label_set_text(&wlan_ssid_label, wlan_ap_ssid);
+	snprintf(wlan_ap_psk, sizeof(wlan_ap_psk), "PSK: %.*s", psk_len, &wlan_encode_buffer[psk_offset]);
+	gui_label_set_text(&wlan_psk_label, wlan_ap_psk);
+
 	gui_unlock(gui_root);
-	ESP_LOGI(TAG, "WiFi QR-Code updated");
+	ESP_LOGI(TAG, "WLAN QR-Code updated");
 }
 
 static void on_wlan_ap_event(void *priv, void *data) {
@@ -145,17 +160,23 @@ void wlan_settings_init(gui_t *gui) {
 	gui_element_set_size(&wlan_settings_container.element, 256, 64);
 	gui_element_set_hidden(&wlan_settings_container.element, true);
 
-	gui_image_init(&wlan_ssid_image, 37, 12, EMBEDDED_FILE_PTR(ssid_37x12_raw));
-	gui_element_set_position(&wlan_ssid_image.element, 4, 7);
-	gui_element_add_child(&wlan_settings_container.element, &wlan_ssid_image.element);
+	gui_label_init(&wlan_ssid_label, "SSID:");
+	gui_label_set_font_size(&wlan_ssid_label, 13);
+	gui_element_set_size(&wlan_ssid_label.element, 180, 18);
+	gui_element_set_position(&wlan_ssid_label.element, 2, 6);
+	gui_element_add_child(&wlan_settings_container.element, &wlan_ssid_label.element);
 
-	gui_image_init(&wlan_psk_image, 31, 12, EMBEDDED_FILE_PTR(psk_31x12_raw));
-	gui_element_set_position(&wlan_psk_image.element, 11, 26);
-	gui_element_add_child(&wlan_settings_container.element, &wlan_psk_image.element);
+	gui_label_init(&wlan_psk_label, "PSK:");
+	gui_label_set_font_size(&wlan_psk_label, 13);
+	gui_element_set_size(&wlan_psk_label.element, 180, 18);
+	gui_element_set_position(&wlan_psk_label.element, 8, 28);
+	gui_element_add_child(&wlan_settings_container.element, &wlan_psk_label.element);
 
-	gui_image_init(&wlan_generate_psk_image, 176, 9, EMBEDDED_FILE_PTR(generate_psk_176x9_raw));
-	gui_element_set_position(&wlan_generate_psk_image.element, 5, 48);
-	gui_element_add_child(&wlan_settings_container.element, &wlan_generate_psk_image.element);
+	gui_label_init(&wlan_generate_psk_label, "Press <ENTER> to generate new PSK");
+	gui_label_set_font_size(&wlan_generate_psk_label, 9);
+	gui_element_set_size(&wlan_generate_psk_label.element, 190, 10);
+	gui_element_set_position(&wlan_generate_psk_label.element, 2, 50);
+	gui_element_add_child(&wlan_settings_container.element, &wlan_generate_psk_label.element);
 
 	gui_rectangle_init(&wlan_qr_code_border);
 	gui_rectangle_set_color(&wlan_qr_code_border, 255);
@@ -176,9 +197,11 @@ void wlan_settings_init(gui_t *gui) {
 	gui_element_set_size(&wait_modal_border.element, 256 - 40, 64 - 20);
 	gui_element_add_child(&wait_modal_container.element, &wait_modal_border.element);
 
-	gui_image_init(&wait_modal_image, 119, 22, EMBEDDED_FILE_PTR(please_wait_119x22_raw));
+	gui_label_init(&wait_modal_label, "Please wait...");
+	gui_label_set_font_size(&wait_modal_label, 15);
+	gui_element_set_size(&wait_modal_label.element, 119, 22);
 	gui_element_set_position(&wait_modal_container.element, (256 - 40 - 119) / 2, (64 - 20 - 22) / 2);
-	gui_element_add_child(&wait_modal_container.element, &wait_modal_image.element);
+	gui_element_add_child(&wait_modal_container.element, &wait_modal_label.element);
 
 	buttons_register_multi_button_event_handler(&button_event_handler, &button_event_cfg);
 	event_bus_subscribe(&wlan_event_handler, "wlan_ap", on_wlan_ap_event, NULL);
