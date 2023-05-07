@@ -10,3 +10,9 @@
 [submodule "components/esp-idf-qr-code-generator-component"]
 	path = components/esp-idf-qr-code-generator-component
 	url = https://github.com/TobleMiner/esp-idf-qr-code-generator-component.git
+[submodule "esp-idf-freetype-component"]
+	path = esp-idf-freetype-component
+	url = https://github.com/TobleMiner/esp-idf-freetype-component.git
+[submodule "components/esp-idf-freetype-component"]
+	path = components/esp-idf-freetype-component
+	url = https://github.com/TobleMiner/esp-idf-freetype-component.git
