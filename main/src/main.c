@@ -269,6 +269,9 @@ void app_main(void)
 	// Initialize event bus
 	event_bus_init();
 
+	// Initialize charger readouts
+	charger_init();
+
 	// Setup NVS
 	nvs_init();
 
