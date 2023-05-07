@@ -3,4 +3,5 @@
 cmake_minimum_required(VERSION 3.16)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+link_libraries(-Wl,--print-memory-usage)
 project(oled_nametag)
