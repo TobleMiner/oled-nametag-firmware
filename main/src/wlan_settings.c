@@ -163,18 +163,18 @@ void wlan_settings_init(gui_t *gui) {
 	gui_label_init(&wlan_ssid_label, "SSID:");
 	gui_label_set_font_size(&wlan_ssid_label, 13);
 	gui_element_set_size(&wlan_ssid_label.element, 180, 18);
-	gui_element_set_position(&wlan_ssid_label.element, 2, 6);
+	gui_element_set_position(&wlan_ssid_label.element, 1, 6);
 	gui_element_add_child(&wlan_settings_container.element, &wlan_ssid_label.element);
 
 	gui_label_init(&wlan_psk_label, "PSK:");
 	gui_label_set_font_size(&wlan_psk_label, 13);
 	gui_element_set_size(&wlan_psk_label.element, 180, 18);
-	gui_element_set_position(&wlan_psk_label.element, 8, 28);
+	gui_element_set_position(&wlan_psk_label.element, 8, 26);
 	gui_element_add_child(&wlan_settings_container.element, &wlan_psk_label.element);
 
 	gui_label_init(&wlan_generate_psk_label, "Press <ENTER> to generate new PSK");
 	gui_label_set_font_size(&wlan_generate_psk_label, 9);
-	gui_element_set_size(&wlan_generate_psk_label.element, 190, 10);
+	gui_element_set_size(&wlan_generate_psk_label.element, 190, 14);
 	gui_element_set_position(&wlan_generate_psk_label.element, 2, 50);
 	gui_element_add_child(&wlan_settings_container.element, &wlan_generate_psk_label.element);
 
