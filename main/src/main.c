@@ -130,8 +130,6 @@ static void oled_show_image(spi_device_handle_t spidev, unsigned int slot) {
 	}
 }
 
-void wifi_main(void);
-
 static pixelflut_t pixelflut;
 static uint8_t oled_fb[8192] = { 0 };
 static uint8_t gui_render_fb[256 * 64];
@@ -173,13 +171,6 @@ gui_t gui;
 static button_event_handler_t gifplayer_button_event_handler;
 static bool handle_gifplayer_button_press(const button_event_t *event, void *priv) {
 	ESP_LOGI(TAG, "Button %s pressed", button_to_name(event->button));
-/*
-	if (event->button == BUTTON_UP) {
-		gifplayer_play_prev_animation();
-	} else if (event->button == BUTTON_DOWN) {
-		gifplayer_play_next_animation();
-        }
-*/
 	return false;
 }
 
@@ -189,14 +180,6 @@ static bool handle_reset_button_press(const button_event_t *event, void *priv) {
 //	esp_restart();
 	return false;
 }
-
-gui_list_t gui_list_settings;
-gui_image_t gui_image_gif_player;
-gui_image_t gui_image_wlan_settings;
-gui_image_t gui_image_power_off;
-gui_container_t gui_container_wlan_settings2;
-gui_image_t gui_image_wlan_settings2;
-gui_rectangle_t gui_rectangle;
 
 TaskHandle_t main_task;
 
@@ -301,56 +284,6 @@ void app_main(void)
 	// Mount main fat storage
 	ESP_ERROR_CHECK(flash_fatfs_mount("flash", "/flash"));
 
-/*
-	gui_list_init(&gui_list_settings);
-	gui_image_init(&gui_image_gif_player, 119, 21, EMBEDDED_FILE_PTR(gif_player_119x21_raw));
-	gui_image_init(&gui_image_wlan_settings, 119, 20, EMBEDDED_FILE_PTR(wlan_settings_119x20_raw));
-	gui_image_init(&gui_image_power_off, 119, 18, EMBEDDED_FILE_PTR(power_off_119x18_raw));
-	gui_image_init(&gui_image_wlan_settings2, 119, 20, EMBEDDED_FILE_PTR(wlan_settings_119x20_raw));
-	gui_container_init(&gui_container_wlan_settings2);
-	gui_rectangle_init(&gui_rectangle);
-
-	gui_element_add_child(&gui.container.element, &gui_list_settings.container.element);
-	gui_element_set_position(&gui_list_settings.container.element, 14, 0);
-	gui_element_set_size(&gui_list_settings.container.element, 144, 64);
-
-	gui_element_set_selectable(&gui_image_gif_player.element, true);
-	gui_element_add_child(&gui_list_settings.container.element, &gui_image_gif_player.element);
-	gui_element_set_position(&gui_image_gif_player.element, 0, 2);
-	gui_event_handler_cfg_t event_handler_cfg = {
-		.event = GUI_EVENT_CLICK,
-		.cb = on_image_gif_player_click,
-	};
-	gui_element_add_event_handler(&gui_image_gif_player.element, &gui_image_gif_player_on_click_handler, &event_handler_cfg);
-
-	gui_element_set_selectable(&gui_image_wlan_settings.element, true);
-	gui_element_add_child(&gui_list_settings.container.element, &gui_image_wlan_settings.element);
-	gui_element_set_position(&gui_image_wlan_settings.element, 0, 23);
-	event_handler_cfg.cb = on_image_wlan_settings_click;
-	gui_element_add_event_handler(&gui_image_wlan_settings.element, &gui_image_wlan_settings_on_click_handler, &event_handler_cfg);
-
-	gui_element_set_selectable(&gui_image_power_off.element, true);
-	gui_element_add_child(&gui_list_settings.container.element, &gui_image_power_off.element);
-	gui_element_set_position(&gui_image_power_off.element, 0, 43);
-	event_handler_cfg.cb = on_image_power_off_click;
-	gui_element_add_event_handler(&gui_image_power_off.element, &gui_image_power_off_on_click_handler, &event_handler_cfg);
-
-	gui_element_set_selectable(&gui_container_wlan_settings2.element, true);
-	gui_element_add_child(&gui_list_settings.container.element, &gui_container_wlan_settings2.element);
-	gui_element_set_position(&gui_container_wlan_settings2.element, 0, 66);
-	gui_element_set_size(&gui_container_wlan_settings2.element, 270, 70);
-
-	gui_element_set_selectable(&gui_image_wlan_settings2.element, true);
-	gui_element_add_child(&gui_container_wlan_settings2.element, &gui_image_wlan_settings2.element);
-	gui_element_set_position(&gui_image_wlan_settings2.element, 0, 25);
-
-	gui_element_add_child(&gui.container.element, &gui_rectangle.element);
-	gui_element_set_size(&gui_rectangle.element, 256, 64);
-	gui_rectangle_set_color(&gui_rectangle, 255);
-
-	gui_element_show(&gui_list_settings.container.element);
-	gui_element_show(&gui_rectangle.element);
-*/
 	// Setup buttons
 	buttons_init();
 	const button_event_handler_multi_user_cfg_t button_cfg = {
@@ -432,82 +365,5 @@ void app_main(void)
 		slot = !slot;
 		oled_write_image(spidev, oled_fb, slot ? 1 : 0);
 		oled_show_image(spidev, slot ? 1 : 0);
-/*
-		vTaskDelay(10);
-		cnt++;
-
-		if (cnt % 10 == 0) {
-			hidden = !hidden;
-			gui_lock(&gui);
-			gui_element_set_hidden(&gui_list_settings.container.element, hidden);
-			gui_unlock(&gui);
-		}
-*/
-/*
-		gifplayer_lock();
-		if (gifplayer_is_animation_playing()) {
-			int frame_duration_ms;
-
-			int64_t time_start_us = esp_timer_get_time();
-			oled_show_image(spidev, slot ? 1 : 0);
-			slot = !slot;
-			gifplayer_render_next_frame_(rgb888_fb, 256, 64, &frame_duration_ms);
-			const char *current_animation = gifplayer_get_path_of_playing_animation_();
-			if (!current_default_animation || strcmp(current_default_animation, current_animation)) {
-				if (current_default_animation) {
-					free(current_default_animation);
-				}
-				settings_set_default_animation(current_animation);
-				current_default_animation = strdup(current_animation);
-				ESP_LOGI(TAG, "Saved default animation: %s", STR_NULL(current_default_animation));
-			}
-			gifplayer_unlock();
-			fb_convert(oled_fb, rgb888_fb);
-			oled_write_image(spidev, oled_fb, slot ? 1 : 0);
-			int64_t time_display_us = last_frame_duration_ms * 1000;
-			int64_t time_finish_us = esp_timer_get_time();
-			int64_t time_passed = time_finish_us - time_start_us;
-			int64_t time_wait = time_display_us - time_passed;
-			// TODO: use CONFIG_FREERTOS_HZ
-			if (time_wait < 10000) {
-				vTaskDelay(1);
-			} else {
-				vTaskDelay(time_wait / 10000);
-				do {
-					time_finish_us = esp_timer_get_time();
-					time_passed = time_finish_us - time_start_us;
-					time_wait = time_display_us - time_passed;
-				} while (time_wait > 0);
-			}
-			last_frame_duration_ms = frame_duration_ms;
-		} else {
-			gifplayer_unlock();
-			vTaskDelay(5);
-		}
-*/
-/*
-		for (int i = 0; i < 2; i++) {
-			for (int y = 0; y < 64; y++) {
-				for (int x = 0; x < 256 / 2; x++) {
-					union fb_pixel px1 = pixelflut.fb->pixels[y * 256 + x * 2 + 1];
-					unsigned int int1 = rgb_pixel_to_grayscale(px1);
-					union fb_pixel px2 = pixelflut.fb->pixels[y * 256 + x * 2 + 0];
-					unsigned int int2 = rgb_pixel_to_grayscale(px2);
-					oled_fb[y * 128 + x] = (int1 >> 4) | (int2 & 0xf0);
-				}
-			}
-			oled_write_image(spidev, oled_fb, i);
-			oled_show_image(spidev, i);
-			flips++;
-			int64_t now = esp_timer_get_time();
-			if (now - last >= 1000000) {
-				ESP_LOGI("main", "%lu fps", flips);
-				flips = 0;
-				last = now;
-			}
-			vTaskDelay(2);
-//	 		taskYIELD();
-		}
-*/
 	}
 }
