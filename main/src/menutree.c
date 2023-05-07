@@ -29,80 +29,80 @@ static menu_entry_submenu_t menutree_root = {
 
 // Root menu - Applications
 static gui_list_t menutree_applications_gui_list;
-static gui_image_t menutree_applications_gui_image;
+static gui_label_t menutree_applications_gui_label;
 static menu_entry_submenu_t menutree_root_applications = {
 	.base = {
 		.name = "apps",
 		.parent = &menutree_root,
-		.gui_element = &menutree_applications_gui_image.element
+		.gui_element = &menutree_applications_gui_label.element
 	},
 	.gui_list = &menutree_applications_gui_list
 };
 
 // Root menu - Settings
 static gui_list_t menutree_settings_gui_list;
-static gui_image_t menutree_settings_gui_image;
+static gui_label_t menutree_settings_gui_label;
 static menu_entry_submenu_t menutree_root_settings = {
 	.base = {
 		.name = "settings",
 		.parent = &menutree_root,
-		.gui_element = &menutree_settings_gui_image.element
+		.gui_element = &menutree_settings_gui_label.element
 	},
 	.gui_list = &menutree_settings_gui_list
 };
 
 // Root menu - Power off
-static gui_image_t menutree_power_off_gui_image;
+static gui_label_t menutree_power_off_gui_label;
 static menu_entry_app_t menutree_root_power_off = {
 	.base = {
 		.name = NULL, // NULL to make sure poweroff is never stored as default app
 		.parent = &menutree_root,
-		.gui_element = &menutree_power_off_gui_image.element
+		.gui_element = &menutree_power_off_gui_label.element
 	},
 	.run = power_off_run
 };
 
 // Root menu - Applications - GIF player
-static gui_image_t menutree_gifplayer_gui_image;
+static gui_label_t menutree_gifplayer_gui_label;
 static menu_entry_app_t menutree_root_applications_gif_player = {
 	.base = {
 		.name = "gifplayer",
 		.parent = &menutree_root_applications,
-		.gui_element = &menutree_gifplayer_gui_image.element
+		.gui_element = &menutree_gifplayer_gui_label.element
 	},
 	.run = gifplayer_run
 };
 
 // Root menu - Settings - WLAN Settings
 static gui_list_t menutree_wlan_settings_gui_list;
-static gui_image_t menutree_wlan_settings_gui_image;
+static gui_label_t menutree_wlan_settings_gui_label;
 static menu_entry_submenu_t menutree_root_settings_wlan_settings = {
 	.base = {
 		.name = "wlan",
 		.parent = &menutree_root_settings,
-		.gui_element = &menutree_wlan_settings_gui_image.element
+		.gui_element = &menutree_wlan_settings_gui_label.element
 	},
 	.gui_list = &menutree_wlan_settings_gui_list
 };
 
 // Root menu - Settings - WLAN Settings - AP info
-static gui_image_t menutree_apinfo_gui_image;
+static gui_label_t menutree_apinfo_gui_label;
 static menu_entry_app_t menutree_root_settings_wlan_settings_ap_info = {
 	.base = {
 		.name = "apinfo",
 		.parent = &menutree_root_settings_wlan_settings,
-		.gui_element = &menutree_apinfo_gui_image.element
+		.gui_element = &menutree_apinfo_gui_label.element
 	},
 	.run = wlan_settings_run
 };
 
 // Root menu - Settings - WLAN Settings - Enable/Disable AP
-static gui_image_t menutree_endisable_ap_gui_image;
+static gui_label_t menutree_endisable_ap_gui_label;
 static menu_entry_app_t menutree_root_settings_wlan_settings_endisable_ap = {
 	.base = {
 		.name = "endisableap",
 		.parent = &menutree_root_settings_wlan_settings,
-		.gui_element = &menutree_endisable_ap_gui_image.element
+		.gui_element = &menutree_endisable_ap_gui_label.element
 	},
 	.run = wlan_ap_endisable_run
 };
@@ -129,7 +129,7 @@ static void apply_wlan_ap_state(void) {
 	bool wlan_ap_active = wlan_ap_is_enabled();
 
 	// Update enable/disable menu entry
-	gui_image_set_image(&menutree_endisable_ap_gui_image, 119, 22, wlan_ap_active ? EMBEDDED_FILE_PTR(disable_ap_119x22_raw) : EMBEDDED_FILE_PTR(enable_ap_119x22_raw));
+	gui_label_set_text(&menutree_endisable_ap_gui_label, wlan_ap_active ? "Disable AP" : "Enable AP");
 	// Update indicator icon
 	gui_element_set_hidden(&menutree_wlan_ap_gui_image.element, !wlan_ap_active);
 }
@@ -164,32 +164,56 @@ static void gui_element_init(gui_container_t *root) {
 	// Root menu - Applications
 	gui_list_init(&menutree_applications_gui_list);
 	gui_element_set_size(&menutree_applications_gui_list.container.element, MENU_LIST_WIDTH, MENU_LIST_HEIGHT);
-	gui_image_init(&menutree_applications_gui_image, 119, 22, EMBEDDED_FILE_PTR(applications_119x22_raw));
+
+	gui_label_init(&menutree_applications_gui_label, "Applications");
+	gui_label_set_font_size(&menutree_applications_gui_label, 15);
+	gui_label_set_text_offset(&menutree_applications_gui_label, 3, 1);
+	gui_element_set_size(&menutree_applications_gui_label.element, 119, 22);
 
 	// Root menu - Settings
 	gui_list_init(&menutree_settings_gui_list);
 	gui_element_set_size(&menutree_settings_gui_list.container.element, MENU_LIST_WIDTH, MENU_LIST_HEIGHT);
-	gui_image_init(&menutree_settings_gui_image, 119, 22, EMBEDDED_FILE_PTR(settings_119x22_raw));
-	gui_element_set_position(&menutree_settings_gui_image.element, 0, 22);
+
+	gui_label_init(&menutree_settings_gui_label, "Settings");
+	gui_label_set_font_size(&menutree_settings_gui_label, 15);
+	gui_label_set_text_offset(&menutree_settings_gui_label, 3, 2);
+	gui_element_set_size(&menutree_settings_gui_label.element, 119, 22);
+	gui_element_set_position(&menutree_settings_gui_label.element, 0, 22);
 
 	// Root menu - Power off
-	gui_image_init(&menutree_power_off_gui_image, 119, 18, EMBEDDED_FILE_PTR(power_off_119x18_raw));
-	gui_element_set_position(&menutree_power_off_gui_image.element, 0, 44);
+	gui_label_init(&menutree_power_off_gui_label, "Power off");
+	gui_label_set_font_size(&menutree_power_off_gui_label, 15);
+	gui_label_set_text_offset(&menutree_power_off_gui_label, 3, 1);
+	gui_element_set_size(&menutree_power_off_gui_label.element, 119, 18);
+	gui_element_set_position(&menutree_power_off_gui_label.element, 0, 44);
 
 	// Root menu - Applications - GIF player
-	gui_image_init(&menutree_gifplayer_gui_image, 119, 22, EMBEDDED_FILE_PTR(gif_player_119x22_raw));
+	gui_label_init(&menutree_gifplayer_gui_label, "GIF player");
+	gui_label_set_font_size(&menutree_gifplayer_gui_label, 15);
+	gui_label_set_text_offset(&menutree_gifplayer_gui_label, 3, 1);
+	gui_element_set_size(&menutree_gifplayer_gui_label.element, 119, 22);
 
 	// Root menu - Settings - WLAN Settings
 	gui_list_init(&menutree_wlan_settings_gui_list);
 	gui_element_set_size(&menutree_wlan_settings_gui_list.container.element, MENU_LIST_WIDTH, MENU_LIST_HEIGHT);
-	gui_image_init(&menutree_wlan_settings_gui_image, 119, 22, EMBEDDED_FILE_PTR(wlan_settings_119x22_raw));
+
+	gui_label_init(&menutree_wlan_settings_gui_label, "WLAN settings");
+	gui_label_set_font_size(&menutree_wlan_settings_gui_label, 15);
+	gui_label_set_text_offset(&menutree_wlan_settings_gui_label, 3, 2);
+	gui_element_set_size(&menutree_wlan_settings_gui_label.element, 132, 22);
 
 	// Root menu - Settings - WLAN Settings - AP info
-	gui_image_init(&menutree_apinfo_gui_image, 119, 22, EMBEDDED_FILE_PTR(ap_info_119x22_raw));
+	gui_label_init(&menutree_apinfo_gui_label, "AP info");
+	gui_label_set_font_size(&menutree_apinfo_gui_label, 15);
+	gui_label_set_text_offset(&menutree_apinfo_gui_label, 3, 2);
+	gui_element_set_size(&menutree_apinfo_gui_label.element, 119, 22);
 
 	// Root menu - Settings - WLAN Settings - Enable/Disable AP
-	gui_image_init(&menutree_endisable_ap_gui_image, 119, 22, EMBEDDED_FILE_PTR(enable_ap_119x22_raw));
-	gui_element_set_position(&menutree_endisable_ap_gui_image.element, 0, 22);
+	gui_label_init(&menutree_endisable_ap_gui_label, "Enable AP");
+	gui_label_set_font_size(&menutree_endisable_ap_gui_label, 15);
+	gui_label_set_text_offset(&menutree_endisable_ap_gui_label, 3, 3);
+	gui_element_set_size(&menutree_endisable_ap_gui_label.element, 119, 22);
+	gui_element_set_position(&menutree_endisable_ap_gui_label.element, 0, 22);
 
 	// Vertical separator
 	gui_rectangle_init(&menutree_vertical_separator);
