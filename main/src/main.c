@@ -14,6 +14,8 @@
 
 #include "api.h"
 #include "buttons.h"
+#include "charger.h"
+#include "charging_screen.h"
 #include "embedded_files.h"
 #include "event_bus.h"
 #include "flash.h"
@@ -168,16 +170,10 @@ static void fb_convert_grayscale(uint8_t *stuffed_4bit, const uint8_t *grayscale
 
 gui_t gui;
 
-static button_event_handler_t gifplayer_button_event_handler;
-static bool handle_gifplayer_button_press(const button_event_t *event, void *priv) {
-	ESP_LOGI(TAG, "Button %s pressed", button_to_name(event->button));
-	return false;
-}
-
 static button_event_handler_t reset_button_event_handler;
 static bool handle_reset_button_press(const button_event_t *event, void *priv) {
 	ESP_LOGI(TAG, "Reset button pressed");
-//	esp_restart();
+	esp_restart();
 	return false;
 }
 
@@ -223,6 +219,10 @@ void button_emulator_event_loop(void *arg) {
 	}
 }
 
+void power_on_cb(void) {
+	menu_show(menu);
+}
+
 void app_main(void)
 {
 	esp_err_t ret;
@@ -244,7 +244,7 @@ void app_main(void)
 		.pre_cb = oled_spi_pre_transfer_cb	// Specify pre-transfer callback to handle D/~C line
 	};
 
-	// Ensure we keep the light on
+	// Ensure we keep the lights on
 	power_init();
 
 	// Setup GPIOs
@@ -286,15 +286,6 @@ void app_main(void)
 
 	// Setup buttons
 	buttons_init();
-	const button_event_handler_multi_user_cfg_t button_cfg = {
-		.base = {
-			.cb = handle_gifplayer_button_press,
-		},
-		.multi = {
-			.button_filter = (1 << BUTTON_UP) | (1 << BUTTON_DOWN) | (1 << BUTTON_ENTER) | (1 << BUTTON_EXIT),
-			.action_filter = (1 << BUTTON_ACTION_RELEASE)
-		}
-	};
 	const button_event_handler_single_user_cfg_t reset_button_cfg = {
 		.base = {
 			.cb = handle_reset_button_press,
@@ -302,10 +293,9 @@ void app_main(void)
 		.single = {
 			.button = BUTTON_EXIT,
 			.action = BUTTON_ACTION_HOLD,
-			.min_hold_duration_ms = 1000,
+			.min_hold_duration_ms = 3000,
 		}
 	};
-	buttons_register_multi_button_event_handler(&gifplayer_button_event_handler, &button_cfg);
 	buttons_register_single_button_event_handler(&reset_button_event_handler, &reset_button_cfg);
 
 	// Initialize GUI
@@ -317,9 +307,19 @@ void app_main(void)
 	// Setup wifi settings
 	wlan_settings_init(&gui);
 
+	// Setup charging screen
+	charging_screen_init(&gui, power_on_cb);
+
 	// Setup menu
 	menu = menutree_init(&gui.container, &gui);
-	menu_show(menu);
+	if (power_is_usb_connected()) {
+		ESP_LOGI(TAG, "USB connected, switching to charging screen");
+		power_off();
+		charging_screen_show();
+	} else {
+		ESP_LOGI(TAG, "On battery, switching to main menu");
+		menu_show(menu);
+	}
 
 	// Setup webserver
 	httpd_t *httpd = webserver_preinit();
@@ -339,12 +339,7 @@ void app_main(void)
 	// Start polling input
 	ESP_ERROR_CHECK(xTaskCreate(button_emulator_event_loop, "button_emulator_event_loop", 4096, NULL, 10, NULL) != pdPASS);
 
-	int64_t last = esp_timer_get_time();
-	uint32_t flips = 0;
 	bool slot = false;
-	int last_frame_duration_ms = 0;
-	uint32_t cnt = 0;
-	bool hidden = false;
 	int render_ret = -1;
 	while (1) {
 		const gui_point_t render_size = {

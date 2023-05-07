@@ -1,5 +1,7 @@
 #include "menutree.h"
 
+#include <stddef.h>
+
 #include <esp_log.h>
 
 #include "embedded_files.h"
@@ -53,7 +55,7 @@ static menu_entry_submenu_t menutree_root_settings = {
 static gui_image_t menutree_power_off_gui_image;
 static menu_entry_app_t menutree_root_power_off = {
 	.base = {
-		.name = "poweroff",
+		.name = NULL, // NULL to make sure poweroff is never stored as default app
 		.parent = &menutree_root,
 		.gui_element = &menutree_power_off_gui_image.element
 	},
