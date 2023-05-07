@@ -93,21 +93,17 @@ static bool on_button_event(const button_event_t *event, void *priv) {
 	if (event->button == BUTTON_EXIT) {
 		menu_entry_submenu_t *parent = menu->selected_entry->parent;
 		menu_entry_submenu_t *parent_of_parent = parent->base.parent;
-		menu_entry_t *new_selected_entry;
 
 		if (!parent_of_parent) {
 			// TODO: support exit from menu root level
 			ESP_LOGI(TAG, "Trying to exit from menu root");
 			return false;
 		}
-		new_selected_entry = menu_find_first_entry(parent_of_parent);
-		if (new_selected_entry) {
-			gui_element_set_hidden(&parent->gui_list->container.element, true);
-			gui_element_set_hidden(&parent_of_parent->gui_list->container.element, false);
-			menu->selected_entry = new_selected_entry;
-			gui_list_set_selected_entry(parent_of_parent->gui_list, new_selected_entry->gui_element);
-			return true;
-		}
+		gui_element_set_hidden(&parent->gui_list->container.element, true);
+		gui_element_set_hidden(&parent_of_parent->gui_list->container.element, false);
+		menu->selected_entry = &parent->base;
+		gui_list_set_selected_entry(parent_of_parent->gui_list, parent->base.gui_element);
+		return true;
 	}
 
 	if (event->button == BUTTON_ENTER) {
