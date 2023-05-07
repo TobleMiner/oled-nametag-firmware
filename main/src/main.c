@@ -22,6 +22,7 @@
 #include "menutree.h"
 #include "nvs.h"
 #include "pixelflut/pixelflut.h"
+#include "power.h"
 #include "settings.h"
 #include "webserver.h"
 #include "wlan_settings.h"
@@ -260,12 +261,15 @@ void app_main(void)
 		.pre_cb = oled_spi_pre_transfer_cb	// Specify pre-transfer callback to handle D/~C line
 	};
 
-	main_task = xTaskGetCurrentTaskHandle();
+	// Ensure we keep the light on
+	power_init();
 
 	// Setup GPIOs
 	gpio_set_direction(GPIO_OLED_DC, GPIO_MODE_OUTPUT);
 	gpio_set_direction(GPIO_OLED_RST, GPIO_MODE_OUTPUT);
 	gpio_set_direction(GPIO_OLED_VCC, GPIO_MODE_OUTPUT);
+
+	main_task = xTaskGetCurrentTaskHandle();
 
 	// Initialize SPI bus
 	ret = spi_bus_initialize(SPI_OLED_HOST, &buscfg, SPI_DMA_CH_AUTO);
