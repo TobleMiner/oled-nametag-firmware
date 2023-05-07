@@ -19,6 +19,7 @@
 #include "embedded_files.h"
 #include "event_bus.h"
 #include "flash.h"
+#include "fonts.h"
 #include "gifplayer.h"
 #include "gui.h"
 #include "menutree.h"
@@ -300,6 +301,9 @@ void app_main(void)
 		}
 	};
 	buttons_register_single_button_event_handler(&reset_button_event_handler, &reset_button_cfg);
+
+	// Load fonts
+	fonts_init();
 
 	// Initialize GUI
 	gui_init(&gui, NULL, &gui_ops);

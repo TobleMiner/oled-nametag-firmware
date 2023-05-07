@@ -77,6 +77,14 @@ typedef struct gui_rectangle {
 	gui_pixel_t color;
 } gui_rectangle_t;
 
+typedef struct gui_label {
+	gui_element_t element;
+
+	const char *text;
+	unsigned int font_size;
+	unsigned int offset_x;
+} gui_label_t;
+
 typedef struct gui gui_t;
 
 typedef struct gui_ops {
@@ -122,3 +130,9 @@ void gui_list_set_selected_entry(gui_list_t *list, gui_element_t *entry);
 gui_element_t *gui_rectangle_init(gui_rectangle_t *rectangle);
 void gui_rectangle_set_filled(gui_rectangle_t *rectangle, bool filled);
 void gui_rectangle_set_color(gui_rectangle_t *rectangle, gui_pixel_t color);
+
+// GUI label widget API
+gui_element_t *gui_label_init(gui_label_t *label, const char *text);
+void gui_label_set_font_size(gui_label_t *label, unsigned int height);
+void gui_label_set_text(gui_label_t *label, const char *text);
+void gui_label_set_horizontal_text_offset(gui_label_t *label, unsigned int offset_x);

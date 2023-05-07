@@ -4,6 +4,7 @@
 
 #include <esp_log.h>
 
+#include "fonts.h"
 #include "gui_priv.h"
 #include "util.h"
 
@@ -454,6 +455,74 @@ gui_element_t *gui_rectangle_init(gui_rectangle_t *rectangle) {
 	return &rectangle->element;
 }
 
+static int gui_label_render(gui_element_t *element, const gui_point_t *source_offset, const gui_fb_t *fb, const gui_point_t *destination_size) {
+	gui_label_t *label = container_of(element, gui_label_t, element);
+	int width = MIN(element->area.size.x - source_offset->x, destination_size->x);
+	int height = MIN(element->area.size.y - source_offset->y, destination_size->y);
+	font_fb_t font_fb;
+	font_vec_t font_source_offset = {
+		.x = source_offset->x,
+		.y = source_offset->y
+	};
+	int err;
+	unsigned int offset_x = label->offset_x;
+	unsigned int offset_y = 0;
+	font_text_params_t text_params;
+
+	if (!label->text) {
+		return -1;
+	}
+
+	err = fonts_calculate_text_params(fonts_get_default_font(), label->font_size, label->text, &text_params);
+	if (err) {
+		ESP_LOGW(TAG, "Failed to get text params for string \'%s\': %d", label->text, err);
+	}
+
+	ESP_LOGI(TAG, "Size required to render string: %dx%d px", text_params.effective_size.x, text_params.effective_size.y);
+
+	if (text_params.effective_size.y < element->area.size.y) {
+		offset_y = (element->area.size.y - text_params.effective_size.y) / 2;
+
+		if (source_offset->y > offset_y) {
+			font_source_offset.y -= offset_y;
+			offset_y = 0;
+		} else {
+			offset_y -= source_offset->y;
+		}
+	}
+
+	if (source_offset->x > offset_x) {
+		font_source_offset.x -= offset_x;
+		offset_x = 0;
+	} else {
+		offset_x -= source_offset->x;
+	}
+
+	font_fb.pixels = &fb->pixels[offset_y * fb->stride + offset_x];
+	font_fb.stride = fb->stride;
+	font_fb.size.x = width - offset_x;
+	font_fb.size.y = height - offset_y;
+
+	err = fonts_render_string(fonts_get_default_font(), label->text, &text_params, &font_fb, &font_source_offset);
+	if (err) {
+		ESP_LOGW(TAG, "Failed to render string \'%s\': %d", label->text, err);
+	}
+
+	return -1;
+}
+
+static const gui_element_ops_t gui_label_ops = {
+	.render = gui_label_render,
+};
+
+gui_element_t *gui_label_init(gui_label_t *label, const char *text) {
+	gui_element_init(&label->element, &gui_label_ops);
+	label->font_size = 12;
+	label->text = text;
+	label->offset_x = 0;
+	return &label->element;
+}
+
 // User API functions that might require rerendering
 void gui_element_set_position(gui_element_t *elem, unsigned int x, unsigned int y) {
 	elem->area.position.x = x;
@@ -521,4 +590,22 @@ void gui_image_set_image(gui_image_t *image, unsigned int width, unsigned int he
 	image->image_data_start = image_data_start;
 	gui_element_set_size_(&image->element, width, height);
 	gui_element_check_render(&image->element);
+}
+
+void gui_label_set_font_size(gui_label_t *label, unsigned int height) {
+	label->font_size = height;
+	gui_element_invalidate(&label->element);
+	gui_element_check_render(&label->element);
+}
+
+void gui_label_set_text(gui_label_t *label, const char *text) {
+	label->text = text;
+	gui_element_invalidate(&label->element);
+	gui_element_check_render(&label->element);
+}
+
+void gui_label_set_horizontal_text_offset(gui_label_t *label, unsigned int offset_x) {
+	label->offset_x = offset_x;
+	gui_element_invalidate(&label->element);
+	gui_element_check_render(&label->element);
 }
