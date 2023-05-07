@@ -3,8 +3,6 @@
 #include <endian.h>
 #include <stdint.h>
 
-#include <freertos/FreeRTOS.h>
-
 #include <esp_log.h>
 
 #define REG_CONFIG	0x00
