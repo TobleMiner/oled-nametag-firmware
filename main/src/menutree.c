@@ -5,6 +5,7 @@
 #include "embedded_files.h"
 #include "event_bus.h"
 #include "gifplayer.h"
+#include "power.h"
 #include "settings.h"
 #include "wlan_ap.h"
 #include "wlan_settings.h"
@@ -55,7 +56,8 @@ static menu_entry_app_t menutree_root_power_off = {
 		.name = "poweroff",
 		.parent = &menutree_root,
 		.gui_element = &menutree_power_off_gui_image.element
-	}
+	},
+	.run = power_off_run
 };
 
 // Root menu - Applications - GIF player
