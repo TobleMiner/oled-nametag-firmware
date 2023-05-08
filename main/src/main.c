@@ -274,11 +274,11 @@ void app_main(void)
 	// Initialize event bus
 	event_bus_init();
 
-	// Initialize charger readouts
-	charger_init();
-
 	// Setup scheduler
 	scheduler_init();
+
+	// Initialize charger readouts
+	charger_init();
 
 	// Initialize I2C bus
 	ESP_ERROR_CHECK(i2c_bus_configure());
