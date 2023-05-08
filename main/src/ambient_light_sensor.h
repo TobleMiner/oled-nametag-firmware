@@ -5,6 +5,8 @@
 #include "menu.h"
 
 void ambient_light_sensor_init(gui_t *gui);
+void ambient_light_sensor_stop(void);
+void ambient_light_sensor_start(void);
 
 uint32_t ambient_light_sensor_get_light_level_mlux(void);
 

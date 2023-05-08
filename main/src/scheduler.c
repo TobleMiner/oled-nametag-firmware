@@ -18,6 +18,8 @@ typedef struct scheduler {
 	esp_timer_handle_t timer;
 	SemaphoreHandle_t lock;
 	StaticSemaphore_t lock_buffer;
+	SemaphoreHandle_t run_lock;
+	StaticSemaphore_t run_lock_buffer;
 	bool timer_running;
 	int64_t timer_deadline_us;
 } scheduler_t;
@@ -52,9 +54,11 @@ void scheduler_run(void *arg) {
 		LIST_FOR_EACH_ENTRY_SAFE(cursor, next, &scheduler->tasks, list) {
 			if (now >= cursor->deadline_us) {
 				LIST_DELETE(&cursor->list);
+				xSemaphoreTake(scheduler->run_lock, portMAX_DELAY);
 				xSemaphoreGive(scheduler->lock);
 				cursor->cb(cursor->ctx);
 				xSemaphoreTake(scheduler->lock, portMAX_DELAY);
+				xSemaphoreGive(scheduler->run_lock);
 			} else {
 				break;
 			}
@@ -80,6 +84,7 @@ void scheduler_init() {
 	INIT_LIST_HEAD(scheduler->tasks);
 	ESP_ERROR_CHECK(esp_timer_create(&timer_args, &scheduler->timer));
 	scheduler->lock = xSemaphoreCreateMutexStatic(&scheduler->lock_buffer);
+	scheduler->run_lock = xSemaphoreCreateMutexStatic(&scheduler->run_lock_buffer);
 	scheduler->task = xTaskCreateStatic(scheduler_run, "scheduler", SCHEDULER_TASK_STACK_DEPTH,
 					    scheduler, 1, scheduler->task_stack, &scheduler->task_buffer);
 	scheduler->timer_running = false;
@@ -119,3 +124,12 @@ void scheduler_schedule_task_relative(scheduler_task_t *task, scheduler_cb_f cb,
 	scheduler_schedule_task(task, cb, ctx, now + timeout_us);
 }
 
+void scheduler_abort_task(scheduler_task_t *task) {
+	scheduler_t *scheduler = &scheduler_g;
+
+	xSemaphoreTake(scheduler->run_lock, portMAX_DELAY);
+	xSemaphoreTake(scheduler->lock, portMAX_DELAY);
+	LIST_DELETE(&task->list);
+	xSemaphoreGive(scheduler->lock);
+	xSemaphoreGive(scheduler->run_lock);
+}

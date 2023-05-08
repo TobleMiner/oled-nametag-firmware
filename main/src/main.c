@@ -281,7 +281,7 @@ void app_main(void)
 	scheduler_init();
 
 	// Initialize I2C bus
-	ESP_ERROR_CHECK(i2c_bus_init(I2C_NUM_0, 3, 2, 100000));
+	ESP_ERROR_CHECK(i2c_bus_configure());
 	i2c_detect(I2C_NUM_0);
 
 	// Setup NVS
@@ -318,6 +318,9 @@ void app_main(void)
 
 	// Initialize GUI
 	gui_init(&gui, NULL, &gui_ops);
+
+	// Setup i2c bus UIs
+	i2c_bus_init(&gui);
 
 	// Setup gifplayer
 	gifplayer_init(&gui);

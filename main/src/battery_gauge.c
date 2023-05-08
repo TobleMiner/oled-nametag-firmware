@@ -27,15 +27,24 @@ static void battery_gauge_update(void *ctx) {
 	esp_err_t err;
 
 	if (voltage_mv >= 0) {
-		ESP_LOGI(TAG, "Battery voltage: %.2f V", voltage_mv / 1000.f);
+		if (battery_voltage_mv != voltage_mv) {
+			ESP_LOGI(TAG, "Battery voltage: %.2f V", voltage_mv / 1000.f);
+		}
 		battery_voltage_mv = voltage_mv;
 	} else {
 		ESP_LOGE(TAG, "Failed to read battery voltage: %d", voltage_mv);
 	}
 
 	if (soc_percent >= 0) {
-		ESP_LOGI(TAG, "State of chage: %d%%", soc_percent);
-		battery_soc_percent = soc_percent;
+		if (soc_percent != battery_soc_percent) {
+			ESP_LOGI(TAG, "State of chage: %d%%", soc_percent);
+		}
+		if (battery_soc_percent >= 100) {
+			battery_soc_percent = 0;
+		} else {
+			battery_soc_percent += 5;
+		}
+//		battery_soc_percent = soc_percent;
 	} else {
 		ESP_LOGE(TAG, "Failed to read state of charge: %d", soc_percent);
 	}
@@ -44,7 +53,9 @@ static void battery_gauge_update(void *ctx) {
 	if (err) {
 		ESP_LOGE(TAG, "Failed to read battery current: %d", err);
 	} else {
-		ESP_LOGI(TAG, "Battery current: %d mA", current_ma);
+		if (battery_current_ma != current_ma) {
+			ESP_LOGI(TAG, "Battery current: %d mA", current_ma);
+		}
 		battery_current_ma = current_ma;
 	}
 
@@ -54,6 +65,14 @@ static void battery_gauge_update(void *ctx) {
 
 void battery_gauge_init(void) {
 	ESP_ERROR_CHECK(bq27546_init(&bq_gauge, GAUGE_I2C_BUS));
+	scheduler_schedule_task_relative(&gauge_update_task, battery_gauge_update, NULL, UPDATE_INTERVAL_US);
+}
+
+void battery_gauge_stop(void) {
+	scheduler_abort_task(&gauge_update_task);
+}
+
+void battery_gauge_start(void) {
 	scheduler_schedule_task_relative(&gauge_update_task, battery_gauge_update, NULL, UPDATE_INTERVAL_US);
 }
 

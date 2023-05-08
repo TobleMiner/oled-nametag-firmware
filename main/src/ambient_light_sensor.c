@@ -95,6 +95,14 @@ void ambient_light_sensor_init(gui_t *gui) {
 	scheduler_schedule_task_relative(&veml_update_task, ambient_light_sensor_update, NULL, UPDATE_INTERVAL_US);
 }
 
+void ambient_light_sensor_stop(void) {
+	scheduler_abort_task(&veml_update_task);
+}
+
+void ambient_light_sensor_start(void) {
+	scheduler_schedule_task_relative(&veml_update_task, ambient_light_sensor_update, NULL, UPDATE_INTERVAL_US);
+}
+
 uint32_t ambient_light_sensor_get_light_level_mlux(void) {
 	return ambient_light_level_mlux;
 }

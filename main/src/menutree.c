@@ -9,6 +9,7 @@
 #include "embedded_files.h"
 #include "event_bus.h"
 #include "gifplayer.h"
+#include "i2c_bus.h"
 #include "power.h"
 #include "settings.h"
 #include "wlan_ap.h"
@@ -98,6 +99,18 @@ static menu_entry_submenu_t menutree_root_settings_wlan_settings = {
 	.gui_list = &menutree_wlan_settings_gui_list
 };
 
+// Root menu - Settings - System Settings
+static gui_list_t menutree_system_settings_gui_list;
+static gui_label_t menutree_system_settings_gui_label;
+static menu_entry_submenu_t menutree_root_settings_system_settings = {
+	.base = {
+		.name = "system",
+		.parent = &menutree_root_settings,
+		.gui_element = &menutree_system_settings_gui_label.element
+	},
+	.gui_list = &menutree_system_settings_gui_list
+};
+
 // Root menu - Settings - WLAN Settings - AP info
 static gui_label_t menutree_apinfo_gui_label;
 static menu_entry_app_t menutree_root_settings_wlan_settings_ap_info = {
@@ -118,6 +131,17 @@ static menu_entry_app_t menutree_root_settings_wlan_settings_endisable_ap = {
 		.gui_element = &menutree_endisable_ap_gui_label.element
 	},
 	.run = wlan_ap_endisable_run
+};
+
+// Root menu - Settings - System Settings - Disable I2C
+static gui_label_t menutree_disable_i2c_gui_label;
+static menu_entry_app_t menutree_root_settings_system_settings_disable_i2c = {
+	.base = {
+		.name = NULL,
+		.parent = &menutree_root_settings_system_settings,
+		.gui_element = &menutree_disable_i2c_gui_label.element
+	},
+	.run = i2c_bus_disable_run
 };
 
 // Vertical separator
@@ -233,10 +257,20 @@ static void gui_element_init(gui_container_t *root) {
 	gui_list_init(&menutree_wlan_settings_gui_list);
 	gui_element_set_size(&menutree_wlan_settings_gui_list.container.element, MENU_LIST_WIDTH, MENU_LIST_HEIGHT);
 
-	gui_label_init(&menutree_wlan_settings_gui_label, "WLAN settings");
+	gui_label_init(&menutree_wlan_settings_gui_label, "WLAN AP");
 	gui_label_set_font_size(&menutree_wlan_settings_gui_label, 15);
 	gui_label_set_text_offset(&menutree_wlan_settings_gui_label, 3, 2);
 	gui_element_set_size(&menutree_wlan_settings_gui_label.element, 132, 22);
+
+	// Root menu - Settings - System Settings
+	gui_list_init(&menutree_system_settings_gui_list);
+	gui_element_set_size(&menutree_system_settings_gui_list.container.element, MENU_LIST_WIDTH, MENU_LIST_HEIGHT);
+
+	gui_label_init(&menutree_system_settings_gui_label, "System");
+	gui_label_set_font_size(&menutree_system_settings_gui_label, 15);
+	gui_label_set_text_offset(&menutree_system_settings_gui_label, 3, 2);
+	gui_element_set_size(&menutree_system_settings_gui_label.element, 132, 22);
+	gui_element_set_position(&menutree_system_settings_gui_label.element, 0, 22);
 
 	// Root menu - Settings - WLAN Settings - AP info
 	gui_label_init(&menutree_apinfo_gui_label, "AP info");
@@ -251,6 +285,12 @@ static void gui_element_init(gui_container_t *root) {
 	gui_element_set_size(&menutree_endisable_ap_gui_label.element, 119, 22);
 	gui_element_set_position(&menutree_endisable_ap_gui_label.element, 0, 22);
 
+	// Root menu - Settings - System Settings - Disable I2C
+	gui_label_init(&menutree_disable_i2c_gui_label, "Disable I2C");
+	gui_label_set_font_size(&menutree_disable_i2c_gui_label, 15);
+	gui_label_set_text_offset(&menutree_disable_i2c_gui_label, 3, 3);
+	gui_element_set_size(&menutree_disable_i2c_gui_label.element, 119, 22);
+
 	// Vertical separator
 	gui_rectangle_init(&menutree_vertical_separator);
 	gui_rectangle_set_color(&menutree_vertical_separator, 255);
@@ -260,12 +300,12 @@ static void gui_element_init(gui_container_t *root) {
 
 	// WLAN AP indicator
 	gui_image_init(&menutree_wlan_ap_gui_image, 15, 12, EMBEDDED_FILE_PTR(wlan_ap_15x12_raw));
-	gui_element_set_position(&menutree_wlan_ap_gui_image.element, 162, 2);
+	gui_element_set_position(&menutree_wlan_ap_gui_image.element, 163, 2);
 	gui_element_add_child(&menutree_root_gui_container.element, &menutree_wlan_ap_gui_image.element);
 
 	// WLAN station indicator
 	gui_image_init(&menutree_wlan_station_gui_image, 20, 12, EMBEDDED_FILE_PTR(wlan_station_20x12_raw));
-	gui_element_set_position(&menutree_wlan_station_gui_image.element, 181, 2);
+	gui_element_set_position(&menutree_wlan_station_gui_image.element, 183, 2);
 	gui_element_add_child(&menutree_root_gui_container.element, &menutree_wlan_station_gui_image.element);
 
 	// Battery indicator
@@ -320,6 +360,10 @@ static void menu_element_init(void) {
 	menu_entry_submenu_init(&menutree_root_settings_wlan_settings);
 	menu_entry_submenu_add_entry(&menutree_root_settings, &menutree_root_settings_wlan_settings.base);
 
+	// Root menu - Settings - System Settings
+	menu_entry_submenu_init(&menutree_root_settings_system_settings);
+	menu_entry_submenu_add_entry(&menutree_root_settings, &menutree_root_settings_system_settings.base);
+
 	// Root menu - Settings - WLAN Settings - AP info
 	menu_entry_app_init(&menutree_root_settings_wlan_settings_ap_info);
 	menu_entry_submenu_add_entry(&menutree_root_settings_wlan_settings, &menutree_root_settings_wlan_settings_ap_info.base);
@@ -327,6 +371,10 @@ static void menu_element_init(void) {
 	// Root menu - Settings - WLAN Settings - Enable/Disable AP
 	menu_entry_app_init(&menutree_root_settings_wlan_settings_endisable_ap);
 	menu_entry_submenu_add_entry(&menutree_root_settings_wlan_settings, &menutree_root_settings_wlan_settings_endisable_ap.base);
+
+	// Root menu - Settings - System Settings - Disable I2C
+	menu_entry_app_init(&menutree_root_settings_system_settings_disable_i2c);
+	menu_entry_submenu_add_entry(&menutree_root_settings_system_settings, &menutree_root_settings_system_settings_disable_i2c.base);
 }
 
 static menu_t menutree_menu;

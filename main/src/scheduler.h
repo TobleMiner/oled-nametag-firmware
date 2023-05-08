@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "list.h"
@@ -16,3 +17,4 @@ typedef struct scheduler_task {
 void scheduler_init();
 void scheduler_schedule_task(scheduler_task_t *task, scheduler_cb_f cb, void *ctx, int64_t deadline_us);
 void scheduler_schedule_task_relative(scheduler_task_t *task, scheduler_cb_f cb, void *ctx, int64_t timeout_us);
+void scheduler_abort_task(scheduler_task_t *task);
