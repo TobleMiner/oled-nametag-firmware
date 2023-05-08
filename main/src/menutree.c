@@ -5,6 +5,7 @@
 #include <esp_log.h>
 
 #include "ambient_light_sensor.h"
+#include "battery_gauge.h"
 #include "embedded_files.h"
 #include "event_bus.h"
 #include "gifplayer.h"
@@ -134,8 +135,13 @@ static gui_image_t menutree_battery_gui_image;
 // Battery SoC
 static gui_rectangle_t menutree_battery_soc_gui_rect;
 
+// Battery SoC text
+static gui_label_t menutree_battery_soc_gui_label;
+static char menutree_battery_soc_text[10];
+
 // UI update events
 static event_bus_handler_t wlan_event_handler;
+static event_bus_handler_t battery_gauge_event_handler;
 
 static void apply_wlan_ap_state(void) {
 	bool wlan_ap_active = wlan_ap_is_enabled();
@@ -151,6 +157,17 @@ static void on_wlan_ap_event(void *priv, void *data) {
 
 	gui_lock(gui);
 	apply_wlan_ap_state();
+	gui_unlock(gui);
+}
+
+static void on_battery_gauge_event(void *priv, void *data) {
+	gui_t *gui = priv;
+	unsigned int soc = battery_gauge_get_soc_percent();
+
+	gui_lock(gui);
+	snprintf(menutree_battery_soc_text, sizeof(menutree_battery_soc_text), "%u%%", soc);
+	gui_label_set_text(&menutree_battery_soc_gui_label, menutree_battery_soc_text);
+	gui_element_set_size(&menutree_battery_soc_gui_rect.element, DIV_ROUND(soc * 15, 100), 6);
 	gui_unlock(gui);
 }
 
@@ -263,6 +280,15 @@ static void gui_element_init(gui_container_t *root) {
 	gui_element_set_position(&menutree_battery_soc_gui_rect.element, 235, 5);
 	gui_element_set_size(&menutree_battery_soc_gui_rect.element, 7, 6);
 	gui_element_add_child(&menutree_root_gui_container.element, &menutree_battery_soc_gui_rect.element);
+
+	// Battery SoC text
+	gui_label_init(&menutree_battery_soc_gui_label, "100%");
+	gui_label_set_font_size(&menutree_battery_soc_gui_label, 8);
+	gui_label_set_text_offset(&menutree_battery_soc_gui_label, -1, 0);
+	gui_label_set_text_alignment(&menutree_battery_soc_gui_label, GUI_TEXT_ALIGN_END);
+	gui_element_set_position(&menutree_battery_soc_gui_label.element, 206, 4);
+	gui_element_set_size(&menutree_battery_soc_gui_label.element, 25, 8);
+	gui_element_add_child(&menutree_root_gui_container.element, &menutree_battery_soc_gui_label.element);
 }
 
 
@@ -343,6 +369,7 @@ menu_t *menutree_init(gui_container_t *gui_root, gui_t *gui) {
 	}
 
 	event_bus_subscribe(&wlan_event_handler, "wlan_ap", on_wlan_ap_event, gui);
+	event_bus_subscribe(&battery_gauge_event_handler, "battery_gauge", on_battery_gauge_event, gui);
 	apply_wlan_ap_state();
 
 	return &menutree_menu;
