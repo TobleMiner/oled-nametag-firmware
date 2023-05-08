@@ -498,7 +498,7 @@ static int gui_label_render(gui_element_t *element, const gui_point_t *source_of
 	font_fb.size.x = width - offset_x;
 	font_fb.size.y = height - offset_y;
 
-	err = fonts_render_string(fonts_get_default_font(), label->text, &text_params, &font_fb, &font_source_offset);
+	err = fonts_render_string(fonts_get_default_font(), label->text, &text_params, &font_source_offset, &font_fb);
 	if (err) {
 		ESP_LOGW(TAG, "Failed to render string \'%s\': %d", label->text, err);
 	}

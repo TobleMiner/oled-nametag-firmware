@@ -90,55 +90,7 @@ int fonts_calculate_text_params(font_t font, unsigned int char_height_px, const 
 	return 0;
 }
 
-static int find_string_size(font_t font, const char *str, unsigned int *ret_width, unsigned int *ret_height, int *ret_max_top) {
-	FT_Error fterr;
-	FT_Vector pos = { .x = 0, .y = 0 };
-	unsigned int width = 0;
-	unsigned int height = 0;
-	int max_top = 0;
-	int min_top = INT_MAX;
-
-	while (*str) {
-		char c = *str++;
-		unsigned int glyph_max_x;
-		unsigned int glyph_max_y;
-
-		fterr = FT_Load_Char(font, c, FT_LOAD_RENDER);
-		if (fterr) {
-			ESP_LOGE(TAG, "Failed to load char '%c': %s (%d)", c, FT_Error_String(fterr), fterr);
-			return fterr;
-		}
-
-		glyph_max_x = DOTS_TO_PIXELS(pos.x);
-		glyph_max_x += font->glyph->bitmap.width;
-		glyph_max_x += font->glyph->bitmap_left;
-		width = MAX(width, glyph_max_x);
-
-		glyph_max_y = DOTS_TO_PIXELS(pos.y);
-		glyph_max_y += font->glyph->bitmap.rows;
-		glyph_max_y += font->glyph->bitmap_top;
-		height = MAX(height, glyph_max_y);
-
-		min_top = MIN(min_top, font->glyph->bitmap_top);
-		max_top = MAX(max_top, font->glyph->bitmap_top);
-
-		pos.x += font->glyph->advance.x;
-		pos.y += font->glyph->advance.y;
-	}
-
-	if (ret_width) {
-		*ret_width = width;
-	}
-	if (ret_height) {
-		*ret_height = height - min_top;
-	}
-	if (ret_max_top) {
-		*ret_max_top = max_top;
-	}
-	return 0;
-}
-
-int fonts_render_string(font_t font, const char *str, const font_text_params_t *params, const font_fb_t *fb, const font_vec_t *source_offset) {
+int fonts_render_string(font_t font, const char *str, const font_text_params_t *params, const font_vec_t *source_offset, const font_fb_t *fb) {
 	FT_Error fterr;
 	FT_Vector pos = { .x = 0, .y = 0 };
 	int max_top = params->max_top;
@@ -162,7 +114,7 @@ int fonts_render_string(font_t font, const char *str, const font_text_params_t *
 		dst_x += glyph->bitmap_left;
 		dst_y += max_top - glyph->bitmap_top;
 		if (dst_x < 0) {
-			offset_x = -dst_x;
+			offset_x += -dst_x;
 		}
 		if (dst_x < fb->size.x && dst_y < fb->size.y && offset_x < font->glyph->bitmap.width) {
 			unsigned int draw_width = MIN(font->glyph->bitmap.width, fb->size.x - dst_x);

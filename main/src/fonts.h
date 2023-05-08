@@ -29,4 +29,4 @@ font_t fonts_get_default_font(void);
 
 int fonts_calculate_text_params(font_t font, unsigned int char_height_px, const char *str, font_text_params_t *params);
 
-int fonts_render_string(font_t font, const char *str, const font_text_params_t *params, const font_fb_t *fb, const font_vec_t *source_offset);
+int fonts_render_string(font_t font, const char *str, const font_text_params_t *params, const font_vec_t *source_offset, const font_fb_t *fb);
