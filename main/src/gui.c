@@ -465,8 +465,8 @@ static int gui_label_render(gui_element_t *element, const gui_point_t *source_of
 		.y = source_offset->y
 	};
 	int err;
-	unsigned int offset_x = label->text_offset.x;
-	unsigned int offset_y = label->text_offset.x;
+	int offset_x = label->text_offset.x;
+	int offset_y = label->text_offset.y;
 	font_text_params_t text_params;
 
 	if (!label->text) {
@@ -480,17 +480,23 @@ static int gui_label_render(gui_element_t *element, const gui_point_t *source_of
 
 	ESP_LOGI(TAG, "Size required to render string: %dx%d px", text_params.effective_size.x, text_params.effective_size.y);
 
-	if (source_offset->y > offset_y) {
-		font_source_offset.y -= offset_y;
-		offset_y = 0;
-	} else {
-		offset_y -= source_offset->y;
+	if (label->align == GUI_TEXT_ALIGN_END) {
+		if (width > text_params.effective_size.x) {
+			offset_x += width - text_params.effective_size.x;
+		}
 	}
+
 	if (source_offset->x > offset_x) {
 		font_source_offset.x -= offset_x;
 		offset_x = 0;
 	} else {
 		offset_x -= source_offset->x;
+	}
+	if (source_offset->y > offset_y) {
+		font_source_offset.y -= offset_y;
+		offset_y = 0;
+	} else {
+		offset_y -= source_offset->y;
 	}
 
 	font_fb.pixels = &fb->pixels[offset_y * fb->stride + offset_x];
@@ -516,6 +522,7 @@ gui_element_t *gui_label_init(gui_label_t *label, const char *text) {
 	label->text = text;
 	label->text_offset.x = 0;
 	label->text_offset.y = 0;
+	label->align = GUI_TEXT_ALIGN_START;
 	return &label->element;
 }
 
@@ -600,7 +607,13 @@ void gui_label_set_text(gui_label_t *label, const char *text) {
 	gui_element_check_render(&label->element);
 }
 
-void gui_label_set_text_offset(gui_label_t *label, unsigned int offset_x, unsigned int offset_y) {
+void gui_label_set_text_alignment(gui_label_t *label, gui_text_alignment_t align) {
+	label->align = align;
+	gui_element_invalidate(&label->element);
+	gui_element_check_render(&label->element);
+}
+
+void gui_label_set_text_offset(gui_label_t *label, int offset_x, int offset_y) {
 	label->text_offset.x = offset_x;
 	label->text_offset.y = offset_y;
 	gui_element_invalidate(&label->element);
