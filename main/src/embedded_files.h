@@ -35,9 +35,5 @@ DECLARE_EMBEDDED_FILE(resources_html);
 DECLARE_EMBEDDED_FILE(battery_21x10_raw);
 DECLARE_EMBEDDED_FILE(wlan_ap_15x12_raw);
 DECLARE_EMBEDDED_FILE(wlan_station_20x12_raw);
-DECLARE_EMBEDDED_FILE(please_wait_119x22_raw);
-DECLARE_EMBEDDED_FILE(ssid_37x12_raw);
-DECLARE_EMBEDDED_FILE(psk_31x12_raw);
-DECLARE_EMBEDDED_FILE(generate_psk_176x9_raw);
 
 DECLARE_EMBEDDED_FILE(droidsans_bold_ttf);
