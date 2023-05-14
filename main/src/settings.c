@@ -36,20 +36,6 @@ static const char *ellipsize_key(const char *key) {
 	return key;
 }
 
-static bool nvs_get_bool_default(const char *key, bool def) {
-	uint8_t val;
-	esp_err_t err;
-
-	key = ellipsize_key(key);
-	err = nvs_get_u8(nvs, key, &val);
-
-	if (err) {
-		return def;
-	}
-
-	return !!val;
-}
-
 static char *nvs_get_string(const char *key) {
 	char *str;
 	size_t len;
