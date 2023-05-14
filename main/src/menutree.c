@@ -261,7 +261,7 @@ static void gui_element_init(gui_container_t *root) {
 	// Root menu - Applications - Ambient light meter
 	gui_label_init(&menutree_ambient_light_meter_gui_label, "Ambient light");
 	gui_label_set_font_size(&menutree_ambient_light_meter_gui_label, 15);
-	gui_label_set_text_offset(&menutree_ambient_light_meter_gui_label, 3, 1);
+	gui_label_set_text_offset(&menutree_ambient_light_meter_gui_label, 3, 2);
 	gui_element_set_size(&menutree_ambient_light_meter_gui_label.element, 132, 22);
 	gui_element_set_position(&menutree_ambient_light_meter_gui_label.element, 0, 22);
 
