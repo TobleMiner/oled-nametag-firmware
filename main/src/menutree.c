@@ -6,6 +6,7 @@
 
 #include "ambient_light_sensor.h"
 #include "battery_gauge.h"
+#include "bms_details.h"
 #include "embedded_files.h"
 #include "event_bus.h"
 #include "gifplayer.h"
@@ -15,7 +16,7 @@
 #include "wlan_ap.h"
 #include "wlan_settings.h"
 
-const char *TAG = "menutree";
+static const char *TAG = "menutree";
 
 // Root
 static gui_container_t menutree_root_gui_container;
@@ -85,6 +86,17 @@ static menu_entry_app_t menutree_root_applications_ambient_light_meter = {
 		.gui_element = &menutree_ambient_light_meter_gui_label.element
 	},
 	.run = ambient_light_sensor_run
+};
+
+// Root menu - Applications - BMS status
+static gui_label_t menutree_bms_status_gui_label;
+static menu_entry_app_t menutree_root_applications_bms_status = {
+	.base = {
+		.name = "bms_status",
+		.parent = &menutree_root_applications,
+		.gui_element = &menutree_bms_status_gui_label.element
+	},
+	.run = bms_details_run
 };
 
 // Root menu - Settings - WLAN Settings
@@ -253,6 +265,13 @@ static void gui_element_init(gui_container_t *root) {
 	gui_element_set_size(&menutree_ambient_light_meter_gui_label.element, 132, 22);
 	gui_element_set_position(&menutree_ambient_light_meter_gui_label.element, 0, 22);
 
+	// Root menu - Applications - BMS status
+	gui_label_init(&menutree_bms_status_gui_label, "BMS status");
+	gui_label_set_font_size(&menutree_bms_status_gui_label, 15);
+	gui_label_set_text_offset(&menutree_bms_status_gui_label, 3, 2);
+	gui_element_set_size(&menutree_bms_status_gui_label.element, 132, 20);
+	gui_element_set_position(&menutree_bms_status_gui_label.element, 0, 44);
+
 	// Root menu - Settings - WLAN Settings
 	gui_list_init(&menutree_wlan_settings_gui_list);
 	gui_element_set_size(&menutree_wlan_settings_gui_list.container.element, MENU_LIST_WIDTH, MENU_LIST_HEIGHT);
@@ -355,6 +374,10 @@ static void menu_element_init(void) {
 	// Root menu - Applications - Ambient light meter
 	menu_entry_app_init(&menutree_root_applications_ambient_light_meter);
 	menu_entry_submenu_add_entry(&menutree_root_applications, &menutree_root_applications_ambient_light_meter.base);
+
+	// Root menu - Applications - BMS status
+	menu_entry_app_init(&menutree_root_applications_bms_status);
+	menu_entry_submenu_add_entry(&menutree_root_applications, &menutree_root_applications_bms_status.base);
 
 	// Root menu - Settings - WLAN Settings
 	menu_entry_submenu_init(&menutree_root_settings_wlan_settings);

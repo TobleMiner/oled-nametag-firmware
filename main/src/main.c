@@ -15,6 +15,7 @@
 #include "api.h"
 #include "ambient_light_sensor.h"
 #include "battery_gauge.h"
+#include "bms_details.h"
 #include "buttons.h"
 #include "charger.h"
 #include "charging_screen.h"
@@ -336,6 +337,9 @@ void app_main(void)
 
 	// Initialize battery gauge
 	battery_gauge_init();
+
+	// Initialize BMS status app
+	bms_details_init(&gui);
 
 	// Setup menu
 	menu = menutree_init(&gui.container, &gui);
