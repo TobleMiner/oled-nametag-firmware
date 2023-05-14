@@ -19,6 +19,7 @@
 #include "buttons.h"
 #include "charger.h"
 #include "charging_screen.h"
+#include "display_settings.h"
 #include "embedded_files.h"
 #include "event_bus.h"
 #include "flash.h"
@@ -200,6 +201,9 @@ void app_main(void)
 
 	// Setup wifi settings
 	wlan_settings_init(&gui);
+
+	// Setup display settings
+	display_settings_init(&gui);
 
 	// Setup charging screen
 	charging_screen_init(&gui, power_on_cb);

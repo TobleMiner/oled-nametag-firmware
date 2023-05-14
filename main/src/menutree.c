@@ -7,6 +7,7 @@
 #include "ambient_light_sensor.h"
 #include "battery_gauge.h"
 #include "bms_details.h"
+#include "display_settings.h"
 #include "embedded_files.h"
 #include "event_bus.h"
 #include "gifplayer.h"
@@ -99,6 +100,18 @@ static menu_entry_app_t menutree_root_applications_bms_status = {
 	.run = bms_details_run
 };
 
+// Root menu - Settings - Display Settings
+static gui_list_t menutree_display_settings_gui_list;
+static gui_label_t menutree_display_settings_gui_label;
+static menu_entry_submenu_t menutree_root_settings_display_settings = {
+	.base = {
+		.name = "display",
+		.parent = &menutree_root_settings,
+		.gui_element = &menutree_display_settings_gui_label.element
+	},
+	.gui_list = &menutree_display_settings_gui_list
+};
+
 // Root menu - Settings - WLAN Settings
 static gui_list_t menutree_wlan_settings_gui_list;
 static gui_label_t menutree_wlan_settings_gui_label;
@@ -121,6 +134,17 @@ static menu_entry_submenu_t menutree_root_settings_system_settings = {
 		.gui_element = &menutree_system_settings_gui_label.element
 	},
 	.gui_list = &menutree_system_settings_gui_list
+};
+
+// Root menu - Settings - Display Settings - Brightness
+static gui_label_t menutree_brightness_gui_label;
+static menu_entry_app_t menutree_root_settings_display_settings_brightness = {
+	.base = {
+		.name = "brightness",
+		.parent = &menutree_root_settings_display_settings,
+		.gui_element = &menutree_brightness_gui_label.element
+	},
+	.run = display_settings_brightness_run
 };
 
 // Root menu - Settings - WLAN Settings - AP info
@@ -272,6 +296,15 @@ static void gui_element_init(gui_container_t *root) {
 	gui_element_set_size(&menutree_bms_status_gui_label.element, 132, 20);
 	gui_element_set_position(&menutree_bms_status_gui_label.element, 0, 44);
 
+	// Root menu - Settings - Display Settings
+	gui_list_init(&menutree_display_settings_gui_list);
+	gui_element_set_size(&menutree_display_settings_gui_list.container.element, MENU_LIST_WIDTH, MENU_LIST_HEIGHT);
+
+	gui_label_init(&menutree_display_settings_gui_label, "Display");
+	gui_label_set_font_size(&menutree_display_settings_gui_label, 15);
+	gui_label_set_text_offset(&menutree_display_settings_gui_label, 3, 2);
+	gui_element_set_size(&menutree_display_settings_gui_label.element, 132, 22);
+
 	// Root menu - Settings - WLAN Settings
 	gui_list_init(&menutree_wlan_settings_gui_list);
 	gui_element_set_size(&menutree_wlan_settings_gui_list.container.element, MENU_LIST_WIDTH, MENU_LIST_HEIGHT);
@@ -280,6 +313,7 @@ static void gui_element_init(gui_container_t *root) {
 	gui_label_set_font_size(&menutree_wlan_settings_gui_label, 15);
 	gui_label_set_text_offset(&menutree_wlan_settings_gui_label, 3, 2);
 	gui_element_set_size(&menutree_wlan_settings_gui_label.element, 132, 22);
+	gui_element_set_position(&menutree_wlan_settings_gui_label.element, 0, 22);
 
 	// Root menu - Settings - System Settings
 	gui_list_init(&menutree_system_settings_gui_list);
@@ -289,7 +323,13 @@ static void gui_element_init(gui_container_t *root) {
 	gui_label_set_font_size(&menutree_system_settings_gui_label, 15);
 	gui_label_set_text_offset(&menutree_system_settings_gui_label, 3, 2);
 	gui_element_set_size(&menutree_system_settings_gui_label.element, 132, 22);
-	gui_element_set_position(&menutree_system_settings_gui_label.element, 0, 22);
+	gui_element_set_position(&menutree_system_settings_gui_label.element, 0, 44);
+
+	// Root menu - Settings - System Settings - Brightness
+	gui_label_init(&menutree_brightness_gui_label, "Brightness");
+	gui_label_set_font_size(&menutree_brightness_gui_label, 15);
+	gui_label_set_text_offset(&menutree_brightness_gui_label, 3, 2);
+	gui_element_set_size(&menutree_brightness_gui_label.element, 119, 22);
 
 	// Root menu - Settings - WLAN Settings - AP info
 	gui_label_init(&menutree_apinfo_gui_label, "AP info");
@@ -379,6 +419,10 @@ static void menu_element_init(void) {
 	menu_entry_app_init(&menutree_root_applications_bms_status);
 	menu_entry_submenu_add_entry(&menutree_root_applications, &menutree_root_applications_bms_status.base);
 
+	// Root menu - Settings - Display Settings
+	menu_entry_submenu_init(&menutree_root_settings_display_settings);
+	menu_entry_submenu_add_entry(&menutree_root_settings, &menutree_root_settings_display_settings.base);
+
 	// Root menu - Settings - WLAN Settings
 	menu_entry_submenu_init(&menutree_root_settings_wlan_settings);
 	menu_entry_submenu_add_entry(&menutree_root_settings, &menutree_root_settings_wlan_settings.base);
@@ -386,6 +430,10 @@ static void menu_element_init(void) {
 	// Root menu - Settings - System Settings
 	menu_entry_submenu_init(&menutree_root_settings_system_settings);
 	menu_entry_submenu_add_entry(&menutree_root_settings, &menutree_root_settings_system_settings.base);
+
+	// Root menu - Settings - Display Settings - Brightness
+	menu_entry_app_init(&menutree_root_settings_display_settings_brightness);
+	menu_entry_submenu_add_entry(&menutree_root_settings_display_settings, &menutree_root_settings_display_settings_brightness.base);
 
 	// Root menu - Settings - WLAN Settings - AP info
 	menu_entry_app_init(&menutree_root_settings_wlan_settings_ap_info);
