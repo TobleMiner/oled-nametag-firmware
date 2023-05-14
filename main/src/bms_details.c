@@ -121,7 +121,7 @@ void bms_details_init(gui_t *gui_root) {
 	buttons_register_multi_button_event_handler(&button_event_handler, &button_event_cfg);
 }
 
-int bms_details_run(menu_cb_f exit_cb, void *cb_ctx) {
+int bms_details_run(menu_cb_f exit_cb, void *cb_ctx, void *priv) {
 	menu_cb = exit_cb;
 	menu_cb_ctx = cb_ctx;
 	gui_element_set_hidden(&app_container.element, false);
