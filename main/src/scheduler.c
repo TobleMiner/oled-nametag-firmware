@@ -37,6 +37,8 @@ static void start_timer_for_task(scheduler_task_t *task) {
 	scheduler_t *scheduler = &scheduler_g;
 	int64_t now = esp_timer_get_time();
 
+	scheduler->timer_deadline_us = task->deadline_us;
+	scheduler->timer_running = true;
 	esp_timer_start_once(scheduler->timer, task->deadline_us > now ? task->deadline_us - now : 0);
 }
 
