@@ -3,12 +3,15 @@
 #include <string.h>
 
 #include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 #include <freertos/task.h>
 
 #include <driver/gpio.h>
 #include <driver/spi_master.h>
 #include <esp_err.h>
 #include <esp_log.h>
+
+#include "event_bus.h"
 
 #define GPIO_SPI_MOSI	36
 #define GPIO_SPI_CLK	33
@@ -22,6 +25,19 @@
 static spi_device_handle_t oled_spidev;
 
 static const uint8_t oled_blank[8192] = { 0 };
+
+static unsigned int oled_brightness = 15;
+
+static SemaphoreHandle_t lock;
+static StaticSemaphore_t lock_buffer;
+
+static void oled_lock(void) {
+	xSemaphoreTake(lock, portMAX_DELAY);
+}
+
+static void oled_unlock(void) {
+	xSemaphoreGive(lock);
+}
 
 static void oled_spi_pre_transfer_cb(spi_transaction_t *t)
 {
@@ -92,6 +108,7 @@ static void oled_configure(spi_device_handle_t spidev)
 static void oled_write_image_(spi_device_handle_t spidev, const uint8_t *image, unsigned int slot) {
 	spi_transaction_t t = { 0 };
 
+	oled_lock();
 	if (slot) {
 		OLED_CMD(0x75, 64, 127); // Select slot 1
 	} else {
@@ -102,6 +119,7 @@ static void oled_write_image_(spi_device_handle_t spidev, const uint8_t *image, 
 	t.tx_buffer = image;
 	t.user = (void *)1;
 	ESP_ERROR_CHECK(spi_device_polling_transmit(spidev, &t));
+	oled_unlock();
 }
 
 void oled_write_image(const uint8_t *image, unsigned int slot)
@@ -112,11 +130,13 @@ void oled_write_image(const uint8_t *image, unsigned int slot)
 void oled_show_image(unsigned int slot) {
 	spi_device_handle_t spidev = oled_spidev;
 
+	oled_lock();
 	if (slot) {
 		OLED_CMD(0xA1, 64); // Select slot 1
 	} else {
 		OLED_CMD(0xA1, 0); // Select slot 0
 	}
+	oled_unlock();
 }
 
 void oled_init() {
@@ -134,9 +154,11 @@ void oled_init() {
 		.clock_speed_hz = 10 * 1000 * 1000,	// Clock out at 10 MHz
 		.mode = 3,				// SPI mode 3
 		.spics_io_num = GPIO_OLED_CS,		// CS pin
-		.queue_size = 2,			// We want to be able to queue 7 transactions at a time
+		.queue_size = 1,			// We want to be able to queue 1 transaction at a time
 		.pre_cb = oled_spi_pre_transfer_cb	// Specify pre-transfer callback to handle D/~C line
 	};
+
+	lock = xSemaphoreCreateMutexStatic(&lock_buffer);
 
 	// Setup GPIOs
 	gpio_set_direction(GPIO_OLED_DC, GPIO_MODE_OUTPUT);
@@ -159,4 +181,22 @@ void oled_init() {
 	gpio_set_level(GPIO_OLED_VCC, 1);
 
 	oled_spidev = spidev;
+}
+
+void oled_set_brightness(unsigned int brightness) {
+	spi_device_handle_t spidev = oled_spidev;
+
+	if (brightness > 0x0f) {
+		brightness = 0x0f;
+	}
+	oled_lock();
+	OLED_CMD(0xC7, brightness);
+	oled_unlock();
+	oled_brightness = brightness;
+
+	event_bus_notify("display", NULL);
+}
+
+unsigned int oled_get_brightness() {
+	return oled_brightness;
 }
