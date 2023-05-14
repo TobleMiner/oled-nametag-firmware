@@ -4,6 +4,7 @@
 #include <esp_log.h>
 
 #include "event_bus.h"
+#include "power.h"
 #include "scheduler.h"
 #include "bq27546.h"
 
@@ -22,6 +23,11 @@ static unsigned int battery_soh_percent = 0;
 static unsigned int battery_time_to_empty_min = 0;
 static int battery_temperature_0_1degc = 0;
 
+#define POWEROFF_THRESHOLD_MV	2800
+#define POWEROFF_SAMPLES	5
+
+static unsigned int samples_below_poweroff_threshold = 0;
+
 static void battery_gauge_update(void *ctx);
 static void battery_gauge_update(void *ctx) {
 	int voltage_mv = bq27546_get_voltage_mv(&bq_gauge);
@@ -35,6 +41,14 @@ static void battery_gauge_update(void *ctx) {
 	if (voltage_mv >= 0) {
 		if (battery_voltage_mv != voltage_mv) {
 			ESP_LOGI(TAG, "Battery voltage: %.2f V", voltage_mv / 1000.f);
+		}
+		if (voltage_mv < POWEROFF_THRESHOLD_MV && !power_is_usb_connected()) {
+			samples_below_poweroff_threshold += 1;
+			if (samples_below_poweroff_threshold >= POWEROFF_SAMPLES) {
+				power_off();
+			}
+		} else {
+			samples_below_poweroff_threshold = 0;
 		}
 		battery_voltage_mv = voltage_mv;
 	} else {
