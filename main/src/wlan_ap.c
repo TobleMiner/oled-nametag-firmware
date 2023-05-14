@@ -16,6 +16,7 @@
 
 #include "event_bus.h"
 #include "settings.h"
+#include "wlan.h"
 
 #define PSK_LENGTH 10
 
@@ -36,6 +37,7 @@ static const char *wlan_ap_ssid = WLAN_AP_SSID;
 static char *wlan_ap_psk = NULL;
 
 static bool wlan_ap_active = false;
+static bool wlan_ap_enabled = false;
 
 void wlan_ap_lock(void) {
 	xSemaphoreTakeRecursive(ap_lock, portMAX_DELAY);
@@ -110,15 +112,17 @@ static void enable_ap_(void) {
 		},
 	};
 
+	wlan_ap_enabled = true;
 	if (wlan_ap_psk) {
 		strcpy((char *)wifi_config.ap.password, wlan_ap_psk);
 
-		ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+		wlan_stop();
+		wlan_reconfigure();
 		ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config));
-		ESP_ERROR_CHECK(esp_wifi_start());
+		wlan_start();
 
 		ESP_LOGI(TAG, "WLAN AP enabled, SSID: %s, PSK: %s", wifi_config.ap.ssid, wifi_config.ap.password);
-		wlan_ap_active = true;
+		wlan_ap_active = wlan_is_started();
 	} else {
 		ESP_LOGE(TAG, "Can not enable AP, PSK not populated");
 	}
@@ -126,7 +130,8 @@ static void enable_ap_(void) {
 }
 
 static void disable_ap_(void) {
-	esp_wifi_stop();
+	wlan_ap_enabled = false;
+	wlan_restart();
 	wlan_ap_active = false;
 	event_bus_notify("wlan_ap", NULL);
 }
@@ -190,6 +195,10 @@ void wlan_ap_disable(void) {
 	wlan_ap_unlock();
 }
 
-bool wlan_ap_is_enabled(void) {
+bool wlan_ap_is_active(void) {
 	return wlan_ap_active;
+}
+
+bool wlan_ap_is_enabled(void) {
+	return wlan_ap_enabled;
 }

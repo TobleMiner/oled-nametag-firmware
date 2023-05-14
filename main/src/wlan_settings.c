@@ -10,6 +10,7 @@
 #include "gui.h"
 #include "util.h"
 #include "wlan_ap.h"
+#include "wlan_station.h"
 
 static const char *TAG = "wlan settings";
 
@@ -227,6 +228,20 @@ int wlan_ap_endisable_run(menu_cb_f exit_cb, void *cb_ctx, void *priv) {
 		wlan_ap_enable_();
 	}
 	wlan_ap_unlock();
+	gui_element_set_hidden(&wait_modal_container.element, true);
+	return 1;
+}
+
+int wlan_station_endisable_run(menu_cb_f exit_cb, void *cb_ctx, void *priv) {
+	gui_element_set_hidden(&wait_modal_container.element, false);
+	gui_element_show(&wait_modal_container.element);
+	wlan_station_lock();
+	if (wlan_station_is_enabled()) {
+		wlan_station_disable_();
+	} else {
+		wlan_station_enable_();
+	}
+	wlan_station_unlock();
 	gui_element_set_hidden(&wait_modal_container.element, true);
 	return 1;
 }

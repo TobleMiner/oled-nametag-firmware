@@ -2,6 +2,8 @@
 
 #include <stdbool.h>
 
+#include <esp_wifi.h>
+
 void wlan_ap_init(void);
 
 // Threadsafe
@@ -10,6 +12,7 @@ void wlan_ap_unlock(void);
 void wlan_ap_generate_new_psk(void);
 void wlan_ap_enable(void);
 void wlan_ap_disable(void);
+bool wlan_ap_is_active(void);
 bool wlan_ap_is_enabled(void);
 
 // Not threadsafe, call only with lock held, use results only while lock held

@@ -37,7 +37,6 @@
 #include "webserver.h"
 #include "wlan_settings.h"
 #include "wlan.h"
-#include "wlan_ap.h"
 
 static const char *TAG = "main";
 
@@ -166,9 +165,6 @@ void app_main(void)
 
 	// Setup WLAN
 	wlan_init();
-
-	// Setup WLAN AP
-	wlan_ap_init();
 
 	// Mount main fat storage
 	ESP_ERROR_CHECK(flash_fatfs_mount("flash", "/flash"));

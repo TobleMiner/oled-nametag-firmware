@@ -16,6 +16,7 @@
 #include "settings.h"
 #include "wlan_ap.h"
 #include "wlan_settings.h"
+#include "wlan_station.h"
 
 static const char *TAG = "menutree";
 
@@ -182,6 +183,18 @@ static menu_entry_app_t menutree_root_settings_wlan_settings_endisable_ap = {
 	.run = wlan_ap_endisable_run
 };
 
+// Root menu - Settings - WLAN Settings - Enable/Disable station
+static gui_label_t menutree_endisable_station_gui_label;
+static gui_marquee_t menutree_endisable_station_gui_marquee;
+static menu_entry_app_t menutree_root_settings_wlan_settings_endisable_station = {
+	.base = {
+		.name = "endisablestation",
+		.parent = &menutree_root_settings_wlan_settings,
+		.gui_element = &menutree_endisable_station_gui_marquee.container.element
+	},
+	.run = wlan_station_endisable_run
+};
+
 // Root menu - Settings - System Settings - Disable I2C
 static gui_label_t menutree_disable_i2c_gui_label;
 static menu_entry_app_t menutree_root_settings_system_settings_disable_i2c = {
@@ -213,7 +226,8 @@ static gui_label_t menutree_battery_soc_gui_label;
 static char menutree_battery_soc_text[10];
 
 // UI update events
-static event_bus_handler_t wlan_event_handler;
+static event_bus_handler_t wlan_ap_event_handler;
+static event_bus_handler_t wlan_station_event_handler;
 static event_bus_handler_t battery_gauge_event_handler;
 static event_bus_handler_t display_settings_event_handler;
 
@@ -221,7 +235,8 @@ static void apply_wlan_ap_state(void) {
 	bool wlan_ap_active = wlan_ap_is_enabled();
 
 	// Update enable/disable menu entry
-	gui_label_set_text(&menutree_endisable_ap_gui_label, wlan_ap_active ? "Disable AP" : "Enable AP");
+	gui_label_set_text(&menutree_endisable_ap_gui_label,
+			   wlan_ap_active ? "Disable AP" : "Enable AP");
 	// Update indicator icon
 	gui_element_set_hidden(&menutree_wlan_ap_gui_image.element, !wlan_ap_active);
 }
@@ -231,6 +246,24 @@ static void on_wlan_ap_event(void *priv, void *data) {
 
 	gui_lock(gui);
 	apply_wlan_ap_state();
+	gui_unlock(gui);
+}
+
+static void apply_wlan_station_state(void) {
+	bool wlan_station_enabled = wlan_station_is_enabled();
+
+	// Update enable/disable menu entry
+	gui_label_set_text(&menutree_endisable_station_gui_label,
+			   wlan_station_enabled ? "Disable station" : "Enable station");
+	// Update indicator icon
+	gui_element_set_hidden(&menutree_wlan_station_gui_image.element, !wlan_station_enabled);
+}
+
+static void on_wlan_station_event(void *priv, void *data) {
+	gui_t *gui = priv;
+
+	gui_lock(gui);
+	apply_wlan_station_state();
 	gui_unlock(gui);
 }
 
@@ -339,7 +372,7 @@ static void gui_element_init(gui_container_t *root) {
 	gui_list_init(&menutree_wlan_settings_gui_list);
 	gui_element_set_size(&menutree_wlan_settings_gui_list.container.element, MENU_LIST_WIDTH, MENU_LIST_HEIGHT);
 
-	gui_label_init(&menutree_wlan_settings_gui_label, "WLAN AP");
+	gui_label_init(&menutree_wlan_settings_gui_label, "WLAN");
 	gui_label_set_font_size(&menutree_wlan_settings_gui_label, 15);
 	gui_label_set_text_offset(&menutree_wlan_settings_gui_label, 3, 2);
 	gui_element_set_size(&menutree_wlan_settings_gui_label.element, 132, 22);
@@ -385,6 +418,18 @@ static void gui_element_init(gui_container_t *root) {
 	gui_label_set_text_offset(&menutree_endisable_ap_gui_label, 3, 3);
 	gui_element_set_size(&menutree_endisable_ap_gui_label.element, 119, 22);
 	gui_element_set_position(&menutree_endisable_ap_gui_label.element, 0, 22);
+
+	// Root menu - Settings - WLAN Settings - Enable/Disable station
+	gui_label_init(&menutree_endisable_station_gui_label, "Enable station");
+	gui_label_set_font_size(&menutree_endisable_station_gui_label, 15);
+	gui_label_set_text_offset(&menutree_endisable_station_gui_label, 3, 3);
+	gui_element_set_size(&menutree_endisable_station_gui_label.element, 140, 22);
+
+	gui_marquee_init(&menutree_endisable_station_gui_marquee);
+	gui_element_set_size(&menutree_endisable_station_gui_marquee.container.element, 119, 22);
+	gui_element_set_position(&menutree_endisable_station_gui_marquee.container.element, 0, 44);
+	gui_element_add_child(&menutree_endisable_station_gui_marquee.container.element,
+			      &menutree_endisable_station_gui_label.element);
 
 	// Root menu - Settings - System Settings - Disable I2C
 	gui_label_init(&menutree_disable_i2c_gui_label, "Disable I2C");
@@ -489,6 +534,10 @@ static void menu_element_init(void) {
 	menu_entry_app_init(&menutree_root_settings_wlan_settings_endisable_ap);
 	menu_entry_submenu_add_entry(&menutree_root_settings_wlan_settings, &menutree_root_settings_wlan_settings_endisable_ap.base);
 
+	// Root menu - Settings - WLAN Settings - Enable/Disable statiob
+	menu_entry_app_init(&menutree_root_settings_wlan_settings_endisable_station);
+	menu_entry_submenu_add_entry(&menutree_root_settings_wlan_settings, &menutree_root_settings_wlan_settings_endisable_station.base);
+
 	// Root menu - Settings - System Settings - Disable I2C
 	menu_entry_app_init(&menutree_root_settings_system_settings_disable_i2c);
 	menu_entry_submenu_add_entry(&menutree_root_settings_system_settings, &menutree_root_settings_system_settings_disable_i2c.base);
@@ -533,10 +582,12 @@ menu_t *menutree_init(gui_container_t *gui_root, gui_t *gui) {
 		free(default_app_name);
 	}
 
-	event_bus_subscribe(&wlan_event_handler, "wlan_ap", on_wlan_ap_event, gui);
+	event_bus_subscribe(&wlan_ap_event_handler, "wlan_ap", on_wlan_ap_event, gui);
+	event_bus_subscribe(&wlan_station_event_handler, "wlan_station", on_wlan_station_event, gui);
 	event_bus_subscribe(&battery_gauge_event_handler, "battery_gauge", on_battery_gauge_event, gui);
 	event_bus_subscribe(&display_settings_event_handler, "display_settings", on_display_settings_event, gui);
 	apply_wlan_ap_state();
+	apply_wlan_station_state();
 	apply_display_settings_state();
 
 	return &menutree_menu;

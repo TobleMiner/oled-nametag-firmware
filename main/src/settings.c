@@ -178,3 +178,11 @@ void settings_set_adaptive_display_brightness_enable(bool enable) {
 bool settings_get_adaptive_display_brightness_enable(void) {
 	return nvs_get_bool("AdaptDispBright", true);
 }
+
+void settings_set_wlan_station_enable(bool enable) {
+	nvs_set_bool("WlanStaEn", enable);
+}
+
+bool settings_get_wlan_station_enable(void) {
+	return nvs_get_bool("WlanStaEn", false);
+}
