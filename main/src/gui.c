@@ -478,7 +478,7 @@ static int gui_label_render(gui_element_t *element, const gui_point_t *source_of
 		ESP_LOGW(TAG, "Failed to get text params for string \'%s\': %d", label->text, err);
 	}
 
-	ESP_LOGI(TAG, "Size required to render string: %dx%d px", text_params.effective_size.x, text_params.effective_size.y);
+	ESP_LOGD(TAG, "Size required to render string: %dx%d px", text_params.effective_size.x, text_params.effective_size.y);
 
 	if (label->align == GUI_TEXT_ALIGN_END) {
 		if (width > text_params.effective_size.x) {
@@ -526,6 +526,107 @@ gui_element_t *gui_label_init(gui_label_t *label, const char *text) {
 	label->text_offset.y = 0;
 	label->align = GUI_TEXT_ALIGN_START;
 	return &label->element;
+}
+
+static int gui_marquee_render(gui_element_t *element, const gui_point_t *source_offset, const gui_fb_t *fb, const gui_point_t *destination_size) {
+	int ret = 10;
+	gui_marquee_t *marquee = container_of(element, gui_marquee_t, container.element);
+	unsigned int max_width = 0;
+	gui_element_t *cursor;
+
+	ESP_LOGD(TAG, "Rendering marquee from [%d, %d] to [%d, %d]...", source_offset->x, source_offset->y, destination_size->x, destination_size->y);
+
+	LIST_FOR_EACH_ENTRY(cursor, &marquee->container.children, list) {
+		max_width = MAX(max_width, cursor->area.size.x);
+	}
+
+	if (max_width > marquee->container.element.area.size.x) {
+		int delta = max_width - marquee->container.element.area.size.x;
+
+		marquee->x_scroll_pos++;
+		marquee->x_scroll_pos %= delta;
+	} else {
+		marquee->x_scroll_pos = 0;
+	}
+
+	LIST_FOR_EACH_ENTRY(cursor, &marquee->container.children, list) {
+		// Render area relative to marquee start
+		gui_point_t scrolled_source_offset = *source_offset;
+		gui_area_t render_area = cursor->area;
+		gui_fb_t local_fb = {
+			.stride = fb->stride
+		};
+		int retval;
+
+		ESP_LOGD(TAG, "Entry size: %dx%d", render_area.size.x, render_area.size.y);
+
+		// Check if there is anything to render
+		if (scrolled_source_offset.x >= render_area.position.x + render_area.size.x ||
+		    scrolled_source_offset.y >= render_area.position.y + render_area.size.y) {
+			// Element outside render area, no need to render it
+			ESP_LOGD(TAG, "Source offset skips over render area, nothing to do");
+			continue;
+		}
+
+		if (render_area.position.x >= scrolled_source_offset.x + destination_size->x ||
+		    render_area.position.y >= scrolled_source_offset.y + destination_size->y) {
+			// Element outside render area, no need to render it
+			ESP_LOGD(TAG, "Destination area ends before render area starts, nothing to do");
+			continue;
+		}
+
+		// Calculate effective rendering area position relative to fb
+		if (render_area.position.x < scrolled_source_offset.x) {
+			render_area.size.x -= scrolled_source_offset.x - render_area.position.x;
+			scrolled_source_offset.x -= render_area.position.x;
+			render_area.position.x = 0;
+		} else {
+			render_area.position.x -= scrolled_source_offset.x;
+			scrolled_source_offset.x = 0;
+		}
+
+		if (render_area.position.y < scrolled_source_offset.y) {
+			render_area.size.y -= scrolled_source_offset.y - render_area.position.y;
+			scrolled_source_offset.y -= render_area.position.y;
+			render_area.position.y = 0;
+		} else {
+			render_area.position.y -= scrolled_source_offset.y;
+			scrolled_source_offset.y = 0;
+		}
+
+		local_fb.pixels = &fb->pixels[render_area.position.y * fb->stride + render_area.position.x];
+
+		// Clip rendering area size by destination area
+		if (render_area.position.x + render_area.size.x - scrolled_source_offset.x > destination_size->x) {
+			render_area.size.x = destination_size->x - render_area.position.x + scrolled_source_offset.x;
+			ESP_LOGD(TAG, "Limiting horizontal size of render area to %d", render_area.size.x);
+		}
+		if (render_area.position.y + render_area.size.y - scrolled_source_offset.y > destination_size->y) {
+			render_area.size.y = destination_size->y - render_area.position.y + scrolled_source_offset.y;
+			ESP_LOGD(TAG, "Limiting vertical size of render area to %d", render_area.size.y);
+		}
+
+		// Skip part of content during rendering
+		scrolled_source_offset.x += marquee->x_scroll_pos;
+
+		retval = gui_element_render(cursor, &scrolled_source_offset, &local_fb, &render_area.size);
+		if (retval != -1) {
+			ret = MIN(ret, retval);
+		}
+	}
+
+	return ret;
+}
+
+static const gui_element_ops_t gui_marquee_ops = {
+	.render = gui_marquee_render,
+	.update_shown = gui_container_update_shown,
+};
+
+gui_element_t *gui_marquee_init(gui_marquee_t *marquee) {
+	gui_container_init_(&marquee->container, &gui_marquee_ops);
+	marquee->x_scroll_pos = 0;
+	return &marquee->container.element;
 }
 
 // User API functions that might require rerendering

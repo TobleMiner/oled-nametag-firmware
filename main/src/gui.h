@@ -91,6 +91,13 @@ typedef struct gui_label {
 	gui_text_alignment_t align;
 } gui_label_t;
 
+typedef struct gui_marquee {
+	gui_container_t container;
+
+	// Managed properties
+	int x_scroll_pos;
+} gui_marquee_t;
+
 typedef struct gui gui_t;
 
 typedef struct gui_ops {
@@ -143,3 +150,6 @@ void gui_label_set_font_size(gui_label_t *label, unsigned int height);
 void gui_label_set_text(gui_label_t *label, const char *text);
 void gui_label_set_text_alignment(gui_label_t *label, gui_text_alignment_t align);
 void gui_label_set_text_offset(gui_label_t *label, int offset_x, int offset_y);
+
+// GUI marquee widget API
+gui_element_t *gui_marquee_init(gui_marquee_t *marquee);
