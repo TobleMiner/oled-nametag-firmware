@@ -202,7 +202,7 @@ static int gui_list_render(gui_element_t *element, const gui_point_t *source_off
 	if (selected_entry) {
 		gui_area_t *area = &selected_entry->area;
 
-		if (list->last_y_scroll_pos > area->position.y + 1) {
+		if (list->last_y_scroll_pos > area->position.y) {
 			// Top of entry would be clipped, scroll to show it
 			list->last_y_scroll_pos = area->position.y - 1;
 		} else if (area->position.y + area->size.y - list->last_y_scroll_pos + 1 >= destination_size->y) {
