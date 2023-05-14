@@ -6,7 +6,6 @@
 
 #include <qrcodegen.h>
 
-#include "embedded_files.h"
 #include "event_bus.h"
 #include "gui.h"
 #include "util.h"
