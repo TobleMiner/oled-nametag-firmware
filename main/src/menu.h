@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdbool.h>
+
 #include "gui.h"
 #include "list.h"
 
@@ -32,6 +34,7 @@ typedef void (*menu_cb_f)(void *cb_ctx);
 typedef struct menu_entry_app {
         menu_entry_t base;
 
+	bool keep_menu_visible;
 	int (*run)(menu_cb_f exit_cb, void *cb_ctx, void *priv);
 	void *priv;
 } menu_entry_app_t;

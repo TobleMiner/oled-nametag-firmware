@@ -60,7 +60,9 @@ static int enter_app(menu_t *menu, menu_entry_app_t *entry_app) {
 	int err;
 
 	ESP_LOGI(TAG, "Starting application");
-	menu_hide(menu);
+	if (!entry_app->keep_menu_visible) {
+		menu_hide(menu);
+	}
 	menu->in_app = true;
 	err = entry_app->run(app_exit_cb, menu, entry_app->priv);
 	if (menu->cbs && menu->cbs->on_app_entry) {
