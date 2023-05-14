@@ -12,7 +12,7 @@
 #include "veml3235sl.h"
 
 #define VEML_I2C_BUS		I2C_NUM_0
-#define UPDATE_INTERVAL_US	MS_TO_US(500)
+#define UPDATE_INTERVAL_US	MS_TO_US(1000)
 
 static const char *TAG = "ambient light sensor";
 
