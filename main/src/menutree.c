@@ -155,6 +155,7 @@ static menu_entry_app_t menutree_root_settings_display_settings_endisable_adapti
 		.parent = &menutree_root_settings_display_settings,
 		.gui_element = &menutree_endisable_adaptive_brightness_gui_label.element
 	},
+	.keep_menu_visible = true,
 	.run = display_settings_endisable_adaptive_brightness_run
 };
 
