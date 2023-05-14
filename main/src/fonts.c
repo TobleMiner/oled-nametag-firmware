@@ -115,6 +115,7 @@ int fonts_render_string(font_t font, const char *str, const font_text_params_t *
 		dst_y += max_top - glyph->bitmap_top;
 		if (dst_x < 0) {
 			offset_x += -dst_x;
+			dst_x = 0;
 		}
 		if (dst_x < fb->size.x && dst_y < fb->size.y && offset_x < font->glyph->bitmap.width) {
 			unsigned int draw_width = MIN(font->glyph->bitmap.width, fb->size.x - dst_x);
