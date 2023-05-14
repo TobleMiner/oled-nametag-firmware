@@ -147,6 +147,17 @@ static menu_entry_app_t menutree_root_settings_display_settings_brightness = {
 	.run = display_settings_brightness_run
 };
 
+// Root menu - Settings - Display Settings - Enable/Disable adaptive brightness
+static gui_label_t menutree_endisable_adaptive_brightness_gui_label;
+static menu_entry_app_t menutree_root_settings_display_settings_endisable_adaptive_brightness = {
+	.base = {
+		.name = NULL,
+		.parent = &menutree_root_settings_display_settings,
+		.gui_element = &menutree_endisable_adaptive_brightness_gui_label.element
+	},
+	.run = display_settings_endisable_adaptive_brightness_run
+};
+
 // Root menu - Settings - WLAN Settings - AP info
 static gui_label_t menutree_apinfo_gui_label;
 static menu_entry_app_t menutree_root_settings_wlan_settings_ap_info = {
@@ -202,6 +213,7 @@ static char menutree_battery_soc_text[10];
 // UI update events
 static event_bus_handler_t wlan_event_handler;
 static event_bus_handler_t battery_gauge_event_handler;
+static event_bus_handler_t display_settings_event_handler;
 
 static void apply_wlan_ap_state(void) {
 	bool wlan_ap_active = wlan_ap_is_enabled();
@@ -228,6 +240,22 @@ static void on_battery_gauge_event(void *priv, void *data) {
 	snprintf(menutree_battery_soc_text, sizeof(menutree_battery_soc_text), "%u%%", soc);
 	gui_label_set_text(&menutree_battery_soc_gui_label, menutree_battery_soc_text);
 	gui_element_set_size(&menutree_battery_soc_gui_rect.element, DIV_ROUND(soc * 15, 100), 6);
+	gui_unlock(gui);
+}
+
+static void apply_display_settings_state(void) {
+	bool adaptive_brightness_enabled = display_settings_is_adaptive_brightness_enabled();
+
+	// Update enable/disable menu entry
+	gui_label_set_text(&menutree_endisable_adaptive_brightness_gui_label,
+			   adaptive_brightness_enabled ? "Disable adaptive brightness" : "Enable adaptive brightness");
+}
+
+static void on_display_settings_event(void *priv, void *data) {
+	gui_t *gui = priv;
+
+	gui_lock(gui);
+	apply_display_settings_state();
 	gui_unlock(gui);
 }
 
@@ -325,11 +353,18 @@ static void gui_element_init(gui_container_t *root) {
 	gui_element_set_size(&menutree_system_settings_gui_label.element, 132, 22);
 	gui_element_set_position(&menutree_system_settings_gui_label.element, 0, 44);
 
-	// Root menu - Settings - System Settings - Brightness
+	// Root menu - Settings - Display Settings - Brightness
 	gui_label_init(&menutree_brightness_gui_label, "Brightness");
 	gui_label_set_font_size(&menutree_brightness_gui_label, 15);
 	gui_label_set_text_offset(&menutree_brightness_gui_label, 3, 2);
 	gui_element_set_size(&menutree_brightness_gui_label.element, 119, 22);
+
+	// Root menu - Settings - Display Settings - Enable/Disable adaptive brightness
+	gui_label_init(&menutree_endisable_adaptive_brightness_gui_label, "Enable auto brightness");
+	gui_label_set_font_size(&menutree_endisable_adaptive_brightness_gui_label, 15);
+	gui_label_set_text_offset(&menutree_endisable_adaptive_brightness_gui_label, 3, 2);
+	gui_element_set_size(&menutree_endisable_adaptive_brightness_gui_label.element, 119, 22);
+	gui_element_set_position(&menutree_endisable_adaptive_brightness_gui_label.element, 0, 22);
 
 	// Root menu - Settings - WLAN Settings - AP info
 	gui_label_init(&menutree_apinfo_gui_label, "AP info");
@@ -435,6 +470,10 @@ static void menu_element_init(void) {
 	menu_entry_app_init(&menutree_root_settings_display_settings_brightness);
 	menu_entry_submenu_add_entry(&menutree_root_settings_display_settings, &menutree_root_settings_display_settings_brightness.base);
 
+	// Root menu - Settings - Display Settings - Enable/Disable adaptive brightness
+	menu_entry_app_init(&menutree_root_settings_display_settings_endisable_adaptive_brightness);
+	menu_entry_submenu_add_entry(&menutree_root_settings_display_settings, &menutree_root_settings_display_settings_endisable_adaptive_brightness.base);
+
 	// Root menu - Settings - WLAN Settings - AP info
 	menu_entry_app_init(&menutree_root_settings_wlan_settings_ap_info);
 	menu_entry_submenu_add_entry(&menutree_root_settings_wlan_settings, &menutree_root_settings_wlan_settings_ap_info.base);
@@ -489,7 +528,9 @@ menu_t *menutree_init(gui_container_t *gui_root, gui_t *gui) {
 
 	event_bus_subscribe(&wlan_event_handler, "wlan_ap", on_wlan_ap_event, gui);
 	event_bus_subscribe(&battery_gauge_event_handler, "battery_gauge", on_battery_gauge_event, gui);
+	event_bus_subscribe(&display_settings_event_handler, "display_settings", on_display_settings_event, gui);
 	apply_wlan_ap_state();
+	apply_display_settings_state();
 
 	return &menutree_menu;
 }

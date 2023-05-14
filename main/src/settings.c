@@ -106,6 +106,32 @@ static void nvs_set_bool(const char *key, bool value) {
 	}
 }
 
+static unsigned int nvs_get_uint(const char *key, unsigned int default_value) {
+	esp_err_t err;
+	uint16_t val;
+
+	key = ellipsize_key(key);
+	err = nvs_get_u16(nvs, key, &val);
+	if (err) {
+		if (err != ESP_ERR_NVS_NOT_FOUND) {
+			ESP_LOGE(TAG, "Failed to load uint '%s' from NVS: %d", key, err);
+		}
+		return default_value;
+	}
+
+	return val;
+}
+
+static void nvs_set_uint(const char *key, unsigned int value) {
+	esp_err_t err;
+
+	key = ellipsize_key(key);
+	err = nvs_set_u16(nvs, key, (uint16_t)value);
+	if (err) {
+		ESP_LOGE(TAG, "Failed to store uint '%s' to NVS: %d", key, err);
+	}
+}
+
 void settings_set_default_animation(const char *str) {
 	nvs_set_string("DefAnimFile", str);
 }
@@ -136,4 +162,19 @@ void settings_set_wlan_ap_enable(bool enable) {
 
 bool settings_get_wlan_ap_enable(void) {
 	return nvs_get_bool("WlanApEn", true);
+}
+
+void settings_set_display_brightness(unsigned int brightness) {
+	nvs_set_uint("DispBright", brightness);
+}
+
+unsigned int settings_get_display_brightness(void) {
+	return nvs_get_uint("DispBright", 15);
+}
+void settings_set_adaptive_display_brightness_enable(bool enable) {
+	nvs_set_bool("AdaptDispBright", enable);
+}
+
+bool settings_get_adaptive_display_brightness_enable(void) {
+	return nvs_get_bool("AdaptDispBright", true);
 }
