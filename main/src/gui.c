@@ -491,12 +491,14 @@ static int gui_label_render(gui_element_t *element, const gui_point_t *source_of
 		offset_x = 0;
 	} else {
 		offset_x -= source_offset->x;
+		font_source_offset.x = 0;
 	}
 	if (source_offset->y > offset_y) {
 		font_source_offset.y -= offset_y;
 		offset_y = 0;
 	} else {
 		offset_y -= source_offset->y;
+		font_source_offset.y = 0;
 	}
 
 	font_fb.pixels = &fb->pixels[offset_y * fb->stride + offset_x];
