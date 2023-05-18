@@ -25,6 +25,7 @@ static unsigned int battery_soh_percent = 0;
 static unsigned int battery_time_to_empty_min = 0;
 static int battery_temperature_0_1degc = 0;
 static bool battery_gauge_healthy = false;
+static bool battery_gauge_initialized = false;
 
 #define POWEROFF_THRESHOLD_MV	2800
 #define POWEROFF_SAMPLES	5
@@ -105,7 +106,7 @@ static void battery_gauge_update(void *ctx) {
 		}
 		battery_temperature_0_1degc = temperature_0_1degc;
 	} else {
-		ESP_LOGE(TAG, "Failed to read state of health: %d", soh_percent);
+		ESP_LOGE(TAG, "Failed to read temperature: %d", soh_percent);
 		parameter_get_success = false;
 	}
 
@@ -143,16 +144,21 @@ void battery_gauge_init(void) {
 		ESP_LOGE(TAG, "Failed to initialize battery gauge: %d", err);
 	} else {
 		battery_gauge_healthy = true;
+		battery_gauge_initialized = true;
 		scheduler_schedule_task_relative(&gauge_update_task, battery_gauge_update, NULL, 0);
 	}
 }
 
 void battery_gauge_stop(void) {
-	scheduler_abort_task(&gauge_update_task);
+	if (battery_gauge_initialized) {
+		scheduler_abort_task(&gauge_update_task);
+	}
 }
 
 void battery_gauge_start(void) {
-	scheduler_schedule_task_relative(&gauge_update_task, battery_gauge_update, NULL, UPDATE_INTERVAL_US);
+	if (battery_gauge_initialized) {
+		scheduler_schedule_task_relative(&gauge_update_task, battery_gauge_update, NULL, UPDATE_INTERVAL_US);
+	}
 }
 
 unsigned int battery_gauge_get_voltage_mv(void) {
