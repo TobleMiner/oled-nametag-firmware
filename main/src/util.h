@@ -82,3 +82,11 @@ esp_err_t xlate_err(int err);
 #define STR_NULL(s) ((s) ? (s) : "(NULL)")
 
 #define MS_TO_US(ms) ((ms) * 1000)
+
+#ifndef STRINGIFY
+#define STRINGIFY(str) #str
+#endif
+
+#ifndef XSTRINGIFY
+#define XSTRINGIFY(str) STRINGIFY(str)
+#endif
