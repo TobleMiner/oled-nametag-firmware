@@ -14,6 +14,7 @@
 #include "i2c_bus.h"
 #include "power.h"
 #include "settings.h"
+#include "util.h"
 #include "wlan_ap.h"
 #include "wlan_settings.h"
 #include "wlan_station.h"
@@ -224,6 +225,9 @@ static gui_rectangle_t menutree_battery_soc_gui_rect;
 // Battery SoC text
 static gui_label_t menutree_battery_soc_gui_label;
 static char menutree_battery_soc_text[10];
+
+// Application version text
+static gui_label_t menutree_app_version_gui_label;
 
 // UI update events
 static event_bus_handler_t wlan_ap_event_handler;
@@ -475,6 +479,14 @@ static void gui_element_init(gui_container_t *root) {
 	gui_element_set_position(&menutree_battery_soc_gui_label.element, 206, 4);
 	gui_element_set_size(&menutree_battery_soc_gui_label.element, 25, 8);
 	gui_element_add_child(&menutree_root_gui_container.element, &menutree_battery_soc_gui_label.element);
+
+	// Application version text
+	gui_label_init(&menutree_app_version_gui_label, XSTRINGIFY(BADGE_APP_VERSION));
+	gui_label_set_font_size(&menutree_app_version_gui_label, 8);
+	gui_label_set_text_alignment(&menutree_app_version_gui_label, GUI_TEXT_ALIGN_CENTER);
+	gui_element_set_position(&menutree_app_version_gui_label.element, 159, 64 - 11);
+	gui_element_set_size(&menutree_app_version_gui_label.element, 256 - 159, 11);
+	gui_element_add_child(&menutree_root_gui_container.element, &menutree_app_version_gui_label.element);
 }
 
 
