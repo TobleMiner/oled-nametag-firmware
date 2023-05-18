@@ -17,6 +17,7 @@
 
 static gui_container_t charging_status_container;
 static gui_image_t battery_icon;
+static gui_label_t battery_icon_attention_label;
 static gui_rectangle_t battery_soc_gui_rect;
 
 // Battery SoC text
@@ -49,15 +50,22 @@ static bool on_button_event(const button_event_t *event, void *priv) {
 	return false;
 }
 
-static void on_battery_gauge_event(void *priv, void *data) {
-	gui_t *gui = priv;
+static void update_battery_gauge_display(gui_t *gui) {
 	unsigned int soc = battery_gauge_get_soc_percent();
+	bool is_healthy = battery_gauge_is_healthy();
 
 	gui_lock(gui);
 	snprintf(battery_soc_text, sizeof(battery_soc_text), "%u%%", soc);
 	gui_label_set_text(&battery_soc_gui_label, battery_soc_text);
 	gui_element_set_size(&battery_soc_gui_rect.element, DIV_ROUND(soc * 15, 100), 6);
+	gui_element_set_hidden(&battery_icon_attention_label.element, is_healthy);
 	gui_unlock(gui);
+}
+
+static void on_battery_gauge_event(void *priv, void *data) {
+	gui_t *gui = priv;
+
+	update_battery_gauge_display(gui);
 }
 
 void charging_status_move_task(void *ctx);
@@ -104,6 +112,15 @@ void charging_screen_init(gui_t *gui, charging_screen_power_on_cb_f cb) {
 	gui_element_set_size(&battery_soc_gui_rect.element, 11, 6);
 	gui_element_add_child(&charging_status_container.element, &battery_soc_gui_rect.element);
 
+	// Battery attention label
+	gui_label_init(&battery_icon_attention_label, "!");
+	gui_label_set_font_size(&battery_icon_attention_label, 8);
+	gui_label_set_text_offset(&battery_icon_attention_label, 1, 1);
+	gui_element_set_position(&battery_icon_attention_label.element, 31 + 21 / 2 - 3, 0);
+	gui_element_set_size(&battery_icon_attention_label.element, 3, 10);
+	gui_element_set_hidden(&battery_icon_attention_label.element, true);
+	gui_element_add_child(&charging_status_container.element, &battery_icon_attention_label.element);
+
 	// Battery SoC text
 	gui_label_init(&battery_soc_gui_label, "100%");
 	gui_label_set_font_size(&battery_soc_gui_label, 8);
@@ -116,6 +133,8 @@ void charging_screen_init(gui_t *gui, charging_screen_power_on_cb_f cb) {
 	event_bus_subscribe(&battery_gauge_event_handler, "battery_gauge", on_battery_gauge_event, gui);
 	buttons_register_multi_button_event_handler(&button_event_handler, &button_event_cfg);
 	scheduler_schedule_task_relative(&status_container_move_task, charging_status_move_task, gui, STATUS_MOVE_INTERVAL_US);
+
+	update_battery_gauge_display(gui);
 }
 
 void charging_screen_show(void) {
