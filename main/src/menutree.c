@@ -222,6 +222,9 @@ static gui_image_t menutree_battery_gui_image;
 // Battery SoC
 static gui_rectangle_t menutree_battery_soc_gui_rect;
 
+// Battery attention label
+static gui_label_t menutree_battery_attention_label;
+
 // Battery SoC text
 static gui_label_t menutree_battery_soc_gui_label;
 static char menutree_battery_soc_text[10];
@@ -271,15 +274,22 @@ static void on_wlan_station_event(void *priv, void *data) {
 	gui_unlock(gui);
 }
 
-static void on_battery_gauge_event(void *priv, void *data) {
-	gui_t *gui = priv;
+static void update_battery_status(gui_t *gui) {
 	unsigned int soc = battery_gauge_get_soc_percent();
+	bool is_healthy = battery_gauge_is_healthy();
 
 	gui_lock(gui);
 	snprintf(menutree_battery_soc_text, sizeof(menutree_battery_soc_text), "%u%%", soc);
 	gui_label_set_text(&menutree_battery_soc_gui_label, menutree_battery_soc_text);
 	gui_element_set_size(&menutree_battery_soc_gui_rect.element, DIV_ROUND(soc * 15, 100), 6);
+	gui_element_set_hidden(&menutree_battery_attention_label.element, is_healthy);
 	gui_unlock(gui);
+}
+
+static void on_battery_gauge_event(void *priv, void *data) {
+	gui_t *gui = priv;
+
+	update_battery_status(gui);
 }
 
 static void apply_display_settings_state(void) {
@@ -378,8 +388,8 @@ static void gui_element_init(gui_container_t *root) {
 
 	gui_label_init(&menutree_wlan_settings_gui_label, "WLAN");
 	gui_label_set_font_size(&menutree_wlan_settings_gui_label, 15);
-	gui_label_set_text_offset(&menutree_wlan_settings_gui_label, 3, 2);
-	gui_element_set_size(&menutree_wlan_settings_gui_label.element, 132, 22);
+	gui_label_set_text_offset(&menutree_wlan_settings_gui_label, 3, 3);
+	gui_element_set_size(&menutree_wlan_settings_gui_label.element, 132, 20);
 	gui_element_set_position(&menutree_wlan_settings_gui_label.element, 0, 22);
 
 	// Root menu - Settings - System Settings
@@ -390,7 +400,7 @@ static void gui_element_init(gui_container_t *root) {
 	gui_label_set_font_size(&menutree_system_settings_gui_label, 15);
 	gui_label_set_text_offset(&menutree_system_settings_gui_label, 3, 2);
 	gui_element_set_size(&menutree_system_settings_gui_label.element, 132, 22);
-	gui_element_set_position(&menutree_system_settings_gui_label.element, 0, 44);
+	gui_element_set_position(&menutree_system_settings_gui_label.element, 0, 42);
 
 	// Root menu - Settings - Display Settings - Brightness
 	gui_label_init(&menutree_brightness_gui_label, "Brightness");
@@ -470,6 +480,15 @@ static void gui_element_init(gui_container_t *root) {
 	gui_element_set_position(&menutree_battery_soc_gui_rect.element, 235, 5);
 	gui_element_set_size(&menutree_battery_soc_gui_rect.element, 7, 6);
 	gui_element_add_child(&menutree_root_gui_container.element, &menutree_battery_soc_gui_rect.element);
+
+	// Battery attention label
+	gui_label_init(&menutree_battery_attention_label, "!");
+	gui_label_set_font_size(&menutree_battery_attention_label, 8);
+	gui_label_set_text_offset(&menutree_battery_attention_label, 1, 1);
+	gui_element_set_position(&menutree_battery_attention_label.element, 233 + 21 / 2 - 3, 3);
+	gui_element_set_size(&menutree_battery_attention_label.element, 3, 10);
+	gui_element_set_hidden(&menutree_battery_attention_label.element, true);
+	gui_element_add_child(&menutree_root_gui_container.element, &menutree_battery_attention_label.element);
 
 	// Battery SoC text
 	gui_label_init(&menutree_battery_soc_gui_label, "100%");
@@ -601,6 +620,7 @@ menu_t *menutree_init(gui_container_t *gui_root, gui_t *gui) {
 	apply_wlan_ap_state();
 	apply_wlan_station_state();
 	apply_display_settings_state();
+	update_battery_status(gui);
 
 	return &menutree_menu;
 }
