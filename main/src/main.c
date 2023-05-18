@@ -155,7 +155,6 @@ void app_main(void)
 
 	// Initialize I2C bus
 	ESP_ERROR_CHECK(i2c_bus_configure());
-	i2c_detect(I2C_NUM_0);
 
 	// Setup NVS
 	nvs_init();
