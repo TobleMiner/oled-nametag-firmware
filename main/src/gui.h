@@ -80,6 +80,7 @@ typedef struct gui_rectangle {
 typedef enum gui_text_alignment {
 	GUI_TEXT_ALIGN_START,
 	GUI_TEXT_ALIGN_END,
+	GUI_TEXT_ALIGN_CENTER,
 } gui_text_alignment_t;
 
 typedef struct gui_label {

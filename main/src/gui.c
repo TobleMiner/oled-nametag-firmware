@@ -484,6 +484,10 @@ static int gui_label_render(gui_element_t *element, const gui_point_t *source_of
 		if (width > text_params.effective_size.x) {
 			offset_x += width - text_params.effective_size.x;
 		}
+	} else if (label->align == GUI_TEXT_ALIGN_CENTER) {
+		if (width > text_params.effective_size.x) {
+			offset_x += (width - text_params.effective_size.x) / 2;
+		}
 	}
 
 	if (source_offset->x > offset_x) {
