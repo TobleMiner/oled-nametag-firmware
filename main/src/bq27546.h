@@ -19,3 +19,5 @@ int bq27546_get_state_of_charge_percent(bq27546_t *bq);
 int bq27546_get_state_of_health_percent(bq27546_t *bq);
 int bq27546_get_time_to_empty_min(bq27546_t *bq);
 int bq27546_get_temperature_0_1k(bq27546_t *bq);
+int bq27546_get_full_charge_capacity_mah(bq27546_t *bq);
+int bq27546_get_remaining_capacity_mah(bq27546_t *bq);

@@ -26,6 +26,8 @@ static unsigned int battery_time_to_empty_min = 0;
 static int battery_temperature_0_1degc = 0;
 static bool battery_gauge_healthy = false;
 static bool battery_gauge_initialized = false;
+static unsigned int battery_full_charge_capacity_mah;
+static unsigned int battery_remaining_capacity_mah;
 
 #define POWEROFF_THRESHOLD_MV	2800
 #define POWEROFF_SAMPLES	5
@@ -57,6 +59,8 @@ static void battery_gauge_update(void *ctx) {
 	int soh_percent = bq27546_get_state_of_health_percent(&bq_gauge);
 	int temperature_0_1k = bq27546_get_temperature_0_1k(&bq_gauge);
 	int time_to_empty_min = bq27546_get_time_to_empty_min(&bq_gauge);
+	int full_charge_capacity = bq27546_get_full_charge_capacity_mah(&bq_gauge);
+	int remaining_capacity = bq27546_get_remaining_capacity_mah(&bq_gauge);
 	esp_err_t err;
 	bool parameter_get_success = true;
 
@@ -117,6 +121,26 @@ static void battery_gauge_update(void *ctx) {
 		battery_time_to_empty_min = time_to_empty_min;
 	} else {
 		ESP_LOGE(TAG, "Failed to read state time to empty: %d", time_to_empty_min);
+		parameter_get_success = false;
+	}
+
+	if (full_charge_capacity >= 0) {
+		if (full_charge_capacity != battery_full_charge_capacity_mah) {
+			ESP_LOGI(TAG, "Full charge capacity: %d mAh", full_charge_capacity);
+		}
+		battery_full_charge_capacity_mah = full_charge_capacity;
+	} else {
+		ESP_LOGE(TAG, "Failed to read full charge capacity: %d", full_charge_capacity);
+		parameter_get_success = false;
+	}
+
+	if (remaining_capacity >= 0) {
+		if (remaining_capacity != battery_remaining_capacity_mah) {
+			ESP_LOGI(TAG, "Remaining capacity: %d mAh", remaining_capacity);
+		}
+		battery_remaining_capacity_mah = remaining_capacity;
+	} else {
+		ESP_LOGE(TAG, "Failed to read remaining capacity: %d", remaining_capacity);
 		parameter_get_success = false;
 	}
 
@@ -189,4 +213,12 @@ int battery_gauge_get_temperature_0_1degc(void) {
 
 bool battery_gauge_is_healthy(void) {
 	return battery_gauge_healthy;
+}
+
+unsigned int battery_gauge_get_full_capacity_mah(void) {
+	return battery_full_charge_capacity_mah;
+}
+
+unsigned int battery_gauge_get_remaining_capacity_mah(void) {
+	return battery_remaining_capacity_mah;
 }

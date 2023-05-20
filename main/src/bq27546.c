@@ -5,17 +5,19 @@
 
 #include <esp_log.h>
 
-#define CMD_CONTROL		0x00
-#define CMD_TEMPERATURE_0_1K	0x06
-#define CMD_CELL_VOLTAGE_MV	0x08
-#define CMD_AVERAGE_CURRENT_MA	0x14
-#define CMD_TIME_TO_EMPTY	0x16
-#define CMD_STATE_OF_CHARGE	0x2c
-#define CMD_STATE_OF_HEALTH	0x2e
+#define CMD_CONTROL			0x00
+#define CMD_TEMPERATURE_0_1K		0x06
+#define CMD_CELL_VOLTAGE_MV		0x08
+#define CMD_AVERAGE_CURRENT_MA		0x14
+#define CMD_TIME_TO_EMPTY		0x16
+#define CMD_FULL_CHARGE_CAPACITY	0x18
+#define CMD_REMAINING_CAPACITY		0x22
+#define CMD_STATE_OF_CHARGE		0x2c
+#define CMD_STATE_OF_HEALTH		0x2e
 
-#define SUBCMD_DEVICE_TYPE	0x0001
-#define SUBCMD_FW_VERSION	0x0002
-#define SUBCMD_HW_VERSION	0x0003
+#define SUBCMD_DEVICE_TYPE		0x0001
+#define SUBCMD_FW_VERSION		0x0002
+#define SUBCMD_HW_VERSION		0x0003
 
 #define ADDRESS	0x55
 #define CHIP_ID 0x0546
@@ -157,3 +159,11 @@ int bq27546_get_temperature_0_1k(bq27546_t *bq) {
 	return bq27546_get_unsigned_param(bq, CMD_TEMPERATURE_0_1K);
 }
 
+
+int bq27546_get_full_charge_capacity_mah(bq27546_t *bq) {
+	return bq27546_get_unsigned_param(bq, CMD_FULL_CHARGE_CAPACITY);
+}
+
+int bq27546_get_remaining_capacity_mah(bq27546_t *bq) {
+	return bq27546_get_unsigned_param(bq, CMD_REMAINING_CAPACITY);
+}
