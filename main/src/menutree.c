@@ -1,6 +1,7 @@
 #include "menutree.h"
 
 #include <stddef.h>
+#include <string.h>
 
 #include <esp_log.h>
 
@@ -15,6 +16,7 @@
 #include "power.h"
 #include "settings.h"
 #include "util.h"
+#include "vendor.h"
 #include "wlan_ap.h"
 #include "wlan_settings.h"
 #include "wlan_station.h"
@@ -240,6 +242,11 @@ static gui_label_t menutree_battery_attention_label;
 static gui_label_t menutree_battery_soc_gui_label;
 static char menutree_battery_soc_text[10];
 
+// Device serial
+static gui_label_t menutree_badge_gui_label;
+static gui_label_t menutree_serial_gui_label;
+static char menutree_serial_text[10];
+
 // Application version text
 static gui_label_t menutree_app_version_gui_label;
 
@@ -248,6 +255,7 @@ static event_bus_handler_t wlan_ap_event_handler;
 static event_bus_handler_t wlan_station_event_handler;
 static event_bus_handler_t battery_gauge_event_handler;
 static event_bus_handler_t display_settings_event_handler;
+static event_bus_handler_t vendor_event_handler;
 
 static void apply_wlan_ap_state(void) {
 	bool wlan_ap_active = wlan_ap_is_enabled();
@@ -322,6 +330,21 @@ static void on_display_settings_event(void *priv, void *data) {
 
 	gui_lock(gui);
 	apply_display_settings_state();
+	gui_unlock(gui);
+}
+
+static void apply_vendor_state(void) {
+	vendor_lock();
+	strncpy(menutree_serial_text, vendor_get_serial_number_(), sizeof(menutree_serial_text) - 1);
+	gui_label_set_text(&menutree_serial_gui_label, menutree_serial_text);
+	vendor_unlock();
+}
+
+static void on_vendor_event(void *priv, void *data) {
+	gui_t *gui = priv;
+
+	gui_lock(gui);
+	apply_vendor_state();
 	gui_unlock(gui);
 }
 
@@ -523,6 +546,21 @@ static void gui_element_init(gui_container_t *root) {
 	gui_element_set_size(&menutree_battery_soc_gui_label.element, 25, 8);
 	gui_element_add_child(&menutree_root_gui_container.element, &menutree_battery_soc_gui_label.element);
 
+	// Device serial
+	gui_label_init(&menutree_badge_gui_label, "Badge");
+	gui_label_set_font_size(&menutree_badge_gui_label, 10);
+	gui_label_set_text_alignment(&menutree_badge_gui_label, GUI_TEXT_ALIGN_CENTER);
+	gui_element_set_position(&menutree_badge_gui_label.element, 159, 20);
+	gui_element_set_size(&menutree_badge_gui_label.element, 256 - 159, 13);
+	gui_element_add_child(&menutree_root_gui_container.element, &menutree_badge_gui_label.element);
+
+	gui_label_init(&menutree_serial_gui_label, "(none)");
+	gui_label_set_font_size(&menutree_serial_gui_label, 10);
+	gui_label_set_text_alignment(&menutree_serial_gui_label, GUI_TEXT_ALIGN_CENTER);
+	gui_element_set_position(&menutree_serial_gui_label.element, 159, 36);
+	gui_element_set_size(&menutree_serial_gui_label.element, 256 - 159, 13);
+	gui_element_add_child(&menutree_root_gui_container.element, &menutree_serial_gui_label.element);
+
 	// Application version text
 	gui_label_init(&menutree_app_version_gui_label, XSTRINGIFY(BADGE_APP_VERSION));
 	gui_label_set_font_size(&menutree_app_version_gui_label, 8);
@@ -645,10 +683,12 @@ menu_t *menutree_init(gui_container_t *gui_root, gui_t *gui) {
 	event_bus_subscribe(&wlan_station_event_handler, "wlan_station", on_wlan_station_event, gui);
 	event_bus_subscribe(&battery_gauge_event_handler, "battery_gauge", on_battery_gauge_event, gui);
 	event_bus_subscribe(&display_settings_event_handler, "display_settings", on_display_settings_event, gui);
+	event_bus_subscribe(&vendor_event_handler, "vendor", on_vendor_event, gui);
 	apply_wlan_ap_state();
 	apply_wlan_station_state();
 	apply_display_settings_state();
 	update_battery_status(gui);
+	apply_vendor_state();
 
 	return &menutree_menu;
 }

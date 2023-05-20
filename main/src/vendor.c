@@ -5,6 +5,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 
+#include "event_bus.h"
 #include "settings.h"
 #include "util.h"
 
@@ -62,6 +63,7 @@ void vendor_set_serial_number(const char *serial) {
 	set_serial_number_(serial);
 	settings_set_serial_number(serial);
 	vendor_unlock();
+	event_bus_notify("vendor", NULL);
 }
 
 const char *vendor_get_serial_number_(void) {
