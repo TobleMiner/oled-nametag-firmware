@@ -75,6 +75,9 @@ void strntr(char* str, size_t len, char a, char b);
 #define hex_to_byte(hex) \
   ((hex_to_nibble((hex)[0]) << 4) | hex_to_nibble((hex)[1]))
 
+#define nibble_to_hex(nib) \
+	(((nib) & 0x0f) < 10 ? '0' + ((nib) & 0x0f) : 'a' + ((nib) & 0x0f) - 10)
+
 ssize_t hex_decode_inplace(uint8_t *ptr, size_t len);
 
 esp_err_t xlate_err(int err);
