@@ -281,15 +281,14 @@ void wlan_settings_init(gui_t *gui) {
 	gui_label_init(&wlan_station_info_state_label, "WLAN station disconnected");
 	gui_label_set_font_size(&wlan_station_info_state_label, 9);
 	gui_label_set_text_offset(&wlan_station_info_state_label, 0, 1);
-	gui_element_set_size(&wlan_station_info_state_label.element, 256 - 6, 10);
+	gui_element_set_size(&wlan_station_info_state_label.element, 256 - 6, 12);
 	gui_element_set_position(&wlan_station_info_state_label.element, 6, 0);
 	gui_element_add_child(&wlan_station_info_container.element, &wlan_station_info_state_label.element);
 
 	gui_label_init(&wlan_station_info_address_label, "Addresses");
 	gui_label_set_font_size(&wlan_station_info_address_label, 9);
-	gui_label_set_text_offset(&wlan_station_info_address_label, 0, 1);
 	gui_element_set_size(&wlan_station_info_address_label.element, 64, 10);
-	gui_element_set_position(&wlan_station_info_address_label.element, 6, 12);
+	gui_element_set_position(&wlan_station_info_address_label.element, 6, 13);
 	gui_element_add_child(&wlan_station_info_container.element, &wlan_station_info_address_label.element);
 
 	for (i = 0; i < ARRAY_SIZE(wlan_station_info_ip_address_labels); i++) {
