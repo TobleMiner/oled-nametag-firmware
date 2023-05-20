@@ -26,6 +26,12 @@ static char time_to_empty_label_text[32];
 static gui_label_t temperature_label;
 static char temperature_label_text[32];
 
+static gui_label_t remaining_label;
+static char remaining_label_text[32];
+
+static gui_label_t capacity_label;
+static char capacity_label_text[32];
+
 static gui_t *gui;
 
 static event_bus_handler_t battery_gauge_event_handler;
@@ -52,6 +58,8 @@ static void battery_gauge_update_gui(gui_t *gui) {
 	unsigned int soh = battery_gauge_get_soh_percent();
 	unsigned int time_to_empty = battery_gauge_get_time_to_empty_min();
 	int temperature = battery_gauge_get_temperature_0_1degc();
+	unsigned int remaining_capacity = battery_gauge_get_remaining_capacity_mah();
+	unsigned int full_capacity = battery_gauge_get_full_capacity_mah();
 
 	gui_lock(gui);
 	snprintf(voltage_label_text, sizeof(voltage_label_text), "Voltage: %u mV", voltage_mv);
@@ -71,6 +79,12 @@ static void battery_gauge_update_gui(gui_t *gui) {
 
 	snprintf(temperature_label_text, sizeof(temperature_label_text), "Temperature: %.1f °C", temperature / 10.f);
 	gui_label_set_text(&temperature_label, temperature_label_text);
+
+	snprintf(remaining_label_text, sizeof(remaining_label_text), "Remaining: %u mAh", remaining_capacity);
+	gui_label_set_text(&remaining_label, remaining_label_text);
+
+	snprintf(capacity_label_text, sizeof(capacity_label_text), "Capacity: %u mAh", full_capacity);
+	gui_label_set_text(&capacity_label, capacity_label_text);
 
 	gui_unlock(gui);
 }
@@ -114,6 +128,8 @@ void bms_details_init(gui_t *gui_root) {
 
 	label_init(&time_to_empty_label, 128, 5 + 14 * 0);
 	label_init(&temperature_label, 128, 5 + 14 * 1);
+	label_init(&remaining_label, 128, 5 + 14 * 2);
+	label_init(&capacity_label, 128, 5 + 14 * 3);
 
 	battery_gauge_update_gui(gui_root);
 
