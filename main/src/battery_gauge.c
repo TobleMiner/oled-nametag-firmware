@@ -138,6 +138,8 @@ static void battery_gauge_update(void *ctx) {
 void battery_gauge_init(void) {
 	esp_err_t err;
 
+	scheduler_task_init(&gauge_update_task);
+
 	err = bq27546_init(&bq_gauge, GAUGE_I2C_BUS);
 
 	if (err) {

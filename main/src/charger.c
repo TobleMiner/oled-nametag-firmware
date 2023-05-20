@@ -10,7 +10,7 @@
 #define CHARGER_GPIO_STAT1	 1
 #define CHARGER_GPIO_STAT2	46
 
-#define UPDATE_INTERVAL_US	MS_TO_US(100)
+#define UPDATE_INTERVAL_US	MS_TO_US(500)
 
 static const char *TAG = "battery charger";
 
@@ -51,6 +51,7 @@ void charger_init(void) {
 	};
 
 	ESP_ERROR_CHECK(gpio_config(&gpio_cfg));
+	scheduler_task_init(&charger_update_task);
 	scheduler_schedule_task_relative(&charger_update_task, battery_charger_update, NULL, UPDATE_INTERVAL_US);
 }
 

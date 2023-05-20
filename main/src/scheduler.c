@@ -2,9 +2,9 @@
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
-#include <freertos/task.h>
 
 #include <esp_err.h>
+#include <esp_log.h>
 #include <esp_timer.h>
 
 #define SCHEDULER_TASK_STACK_SIZE 	4096
@@ -18,11 +18,13 @@ typedef struct scheduler {
 	esp_timer_handle_t timer;
 	SemaphoreHandle_t lock;
 	StaticSemaphore_t lock_buffer;
-	SemaphoreHandle_t run_lock;
-	StaticSemaphore_t run_lock_buffer;
 	bool timer_running;
 	int64_t timer_deadline_us;
+	struct list_head tasks_schedule;
+	struct list_head tasks_abort;
 } scheduler_t;
+
+static const char *TAG = "scheduler";
 
 static scheduler_t scheduler_g;
 
@@ -37,9 +39,9 @@ static void start_timer_for_task(scheduler_task_t *task) {
 	scheduler_t *scheduler = &scheduler_g;
 	int64_t now = esp_timer_get_time();
 
-	scheduler->timer_deadline_us = task->deadline_us;
+	scheduler->timer_deadline_us = task->schedule_sync.deadline_us;
 	scheduler->timer_running = true;
-	esp_timer_start_once(scheduler->timer, task->deadline_us > now ? task->deadline_us - now : 0);
+	esp_timer_start_once(scheduler->timer, task->schedule_sync.deadline_us > now ? task->schedule_sync.deadline_us - now : 0);
 }
 
 void scheduler_run(void *arg) {
@@ -51,26 +53,52 @@ void scheduler_run(void *arg) {
 		struct list_head *next;
 
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-		xSemaphoreTake(scheduler->lock, portMAX_DELAY);
 		now = esp_timer_get_time();
 		LIST_FOR_EACH_ENTRY_SAFE(cursor, next, &scheduler->tasks, list) {
-			if (now >= cursor->deadline_us) {
+			if (now >= cursor->schedule_sync.deadline_us) {
 				LIST_DELETE(&cursor->list);
-				xSemaphoreTake(scheduler->run_lock, portMAX_DELAY);
-				xSemaphoreGive(scheduler->lock);
-				cursor->cb(cursor->ctx);
-				xSemaphoreTake(scheduler->lock, portMAX_DELAY);
-				xSemaphoreGive(scheduler->run_lock);
+				cursor->schedule_sync.cb(cursor->schedule_sync.ctx);
 			} else {
 				break;
 			}
 		}
-		if (!scheduler->timer_running && !LIST_IS_EMPTY(&scheduler->tasks)) {
+
+		xSemaphoreTakeRecursive(scheduler->lock, portMAX_DELAY);
+		LIST_FOR_EACH_ENTRY_SAFE(cursor, next, &scheduler->tasks_abort, list_abort) {
+			LIST_DELETE(&cursor->list);
+			LIST_DELETE(&cursor->list_abort);
+		}
+		LIST_FOR_EACH_ENTRY_SAFE(cursor, next, &scheduler->tasks_schedule, list_schedule) {
+			scheduler_task_t *cursor_;
+			struct list_head *prior_deadline = &scheduler->tasks;
+
+			if (!LIST_IS_EMPTY(&cursor->list)) {
+				LIST_DELETE(&cursor->list);
+			}
+
+			cursor->schedule_sync = cursor->schedule_async;
+			LIST_FOR_EACH_ENTRY(cursor_, &scheduler->tasks, list) {
+				if (cursor_->schedule_sync.deadline_us > cursor->schedule_sync.deadline_us) {
+					break;
+				}
+				prior_deadline = &cursor_->list;
+			}
+			LIST_APPEND(&cursor->list, prior_deadline);
+			LIST_DELETE(&cursor->list_schedule);
+		}
+		xSemaphoreGiveRecursive(scheduler->lock);
+
+		if (!LIST_IS_EMPTY(&scheduler->tasks)) {
 			scheduler_task_t *task = LIST_GET_ENTRY(scheduler->tasks.next, scheduler_task_t, list);
 
-			start_timer_for_task(task);
+			if (scheduler->timer_deadline_us > task->schedule_sync.deadline_us && scheduler->timer_running) {
+				esp_timer_stop(scheduler->timer);
+				scheduler->timer_running = false;
+			}
+			if (!scheduler->timer_running) {
+				start_timer_for_task(task);
+			}
 		}
-		xSemaphoreGive(scheduler->lock);
 	}
 }
 
@@ -84,40 +112,35 @@ void scheduler_init() {
 	};
 
 	INIT_LIST_HEAD(scheduler->tasks);
+	INIT_LIST_HEAD(scheduler->tasks_abort);
+	INIT_LIST_HEAD(scheduler->tasks_schedule);
 	ESP_ERROR_CHECK(esp_timer_create(&timer_args, &scheduler->timer));
-	scheduler->lock = xSemaphoreCreateMutexStatic(&scheduler->lock_buffer);
-	scheduler->run_lock = xSemaphoreCreateMutexStatic(&scheduler->run_lock_buffer);
+	scheduler->lock = xSemaphoreCreateRecursiveMutexStatic(&scheduler->lock_buffer);
 	scheduler->task = xTaskCreateStatic(scheduler_run, "scheduler", SCHEDULER_TASK_STACK_DEPTH,
 					    scheduler, 1, scheduler->task_stack, &scheduler->task_buffer);
 	scheduler->timer_running = false;
 }
 
+void scheduler_task_init(scheduler_task_t *task) {
+	INIT_LIST_HEAD(task->list);
+	INIT_LIST_HEAD(task->list_schedule);
+	INIT_LIST_HEAD(task->list_abort);
+}
+
 void scheduler_schedule_task(scheduler_task_t *task, scheduler_cb_f cb, void *ctx, int64_t deadline_us) {
 	scheduler_t *scheduler = &scheduler_g;
-	scheduler_task_t *cursor;
-	struct list_head *prior_deadline = &scheduler->tasks;
 
-	INIT_LIST_HEAD(task->list);
-	task->deadline_us = deadline_us;
-	task->cb = cb;
-	task->ctx = ctx;
+	xSemaphoreTakeRecursive(scheduler->lock, portMAX_DELAY);
+	task->schedule_async.deadline_us = deadline_us;
+	task->schedule_async.cb = cb;
+	task->schedule_async.ctx = ctx;
 
-	xSemaphoreTake(scheduler->lock, portMAX_DELAY);
-	LIST_FOR_EACH_ENTRY(cursor, &scheduler->tasks, list) {
-		if (cursor->deadline_us > deadline_us) {
-			break;
-		}
-		prior_deadline = &cursor->list;
+	LIST_DELETE(&task->list_abort);
+	if (LIST_IS_EMPTY(&task->list_schedule)) {
+		LIST_APPEND(&task->list_schedule, &scheduler->tasks_schedule);
 	}
-	LIST_APPEND(&task->list, prior_deadline);
-	if (scheduler->timer_deadline_us > task->deadline_us && scheduler->timer_running) {
-		esp_timer_stop(scheduler->timer);
-		scheduler->timer_running = false;
-	}
-	if (!scheduler->timer_running) {
-		start_timer_for_task(task);
-	}
-	xSemaphoreGive(scheduler->lock);
+	xTaskNotifyGive(scheduler->task);
+	xSemaphoreGiveRecursive(scheduler->lock);
 }
 
 void scheduler_schedule_task_relative(scheduler_task_t *task, scheduler_cb_f cb, void *ctx, int64_t timeout_us) {
@@ -129,9 +152,11 @@ void scheduler_schedule_task_relative(scheduler_task_t *task, scheduler_cb_f cb,
 void scheduler_abort_task(scheduler_task_t *task) {
 	scheduler_t *scheduler = &scheduler_g;
 
-	xSemaphoreTake(scheduler->run_lock, portMAX_DELAY);
-	xSemaphoreTake(scheduler->lock, portMAX_DELAY);
-	LIST_DELETE(&task->list);
-	xSemaphoreGive(scheduler->lock);
-	xSemaphoreGive(scheduler->run_lock);
+	xSemaphoreTakeRecursive(scheduler->lock, portMAX_DELAY);
+	LIST_DELETE(&task->list_schedule);
+	if (LIST_IS_EMPTY(&task->list_abort)) {
+		LIST_APPEND(&task->list_abort, &scheduler->tasks_abort);
+	}
+	xTaskNotifyGive(scheduler->task);
+	xSemaphoreGiveRecursive(scheduler->lock);
 }

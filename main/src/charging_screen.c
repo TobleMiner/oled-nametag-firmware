@@ -132,6 +132,7 @@ void charging_screen_init(gui_t *gui, charging_screen_power_on_cb_f cb) {
 
 	event_bus_subscribe(&battery_gauge_event_handler, "battery_gauge", on_battery_gauge_event, gui);
 	buttons_register_multi_button_event_handler(&button_event_handler, &button_event_cfg);
+	scheduler_task_init(&status_container_move_task);
 	scheduler_schedule_task_relative(&status_container_move_task, charging_status_move_task, gui, STATUS_MOVE_INTERVAL_US);
 
 	update_battery_gauge_display(gui);

@@ -92,6 +92,7 @@ void ambient_light_sensor_init(gui_t *gui) {
 	event_bus_subscribe(&sensor_event_handler, "ambient_light_level", on_light_level_event, NULL);
 
 	ESP_ERROR_CHECK(veml3235sl_init(&veml, VEML_I2C_BUS));
+	scheduler_task_init(&veml_update_task);
 	scheduler_schedule_task_relative(&veml_update_task, ambient_light_sensor_update, NULL, UPDATE_INTERVAL_US);
 }
 
