@@ -258,12 +258,18 @@ static void on_wlan_ap_event(void *priv, void *data) {
 
 static void apply_wlan_station_state(void) {
 	bool wlan_station_enabled = wlan_station_is_enabled();
+	bool wlan_station_connected = wlan_station_is_connected();
 
 	// Update enable/disable menu entry
 	gui_label_set_text(&menutree_endisable_station_gui_label,
 			   wlan_station_enabled ? "Disable station" : "Enable station");
 	// Update indicator icon
 	gui_element_set_hidden(&menutree_wlan_station_gui_image.element, !wlan_station_enabled);
+	if (wlan_station_enabled) {
+		gui_image_set_image(&menutree_wlan_station_gui_image, 20, 12, wlan_station_connected ?
+			EMBEDDED_FILE_PTR(wlan_station_connected_20x12_raw) :
+			EMBEDDED_FILE_PTR(wlan_station_disconnected_20x12_raw));
+	}
 }
 
 static void on_wlan_station_event(void *priv, void *data) {
@@ -464,7 +470,7 @@ static void gui_element_init(gui_container_t *root) {
 	gui_element_add_child(&menutree_root_gui_container.element, &menutree_wlan_ap_gui_image.element);
 
 	// WLAN station indicator
-	gui_image_init(&menutree_wlan_station_gui_image, 20, 12, EMBEDDED_FILE_PTR(wlan_station_20x12_raw));
+	gui_image_init(&menutree_wlan_station_gui_image, 20, 12, EMBEDDED_FILE_PTR(wlan_station_disconnected_20x12_raw));
 	gui_element_set_position(&menutree_wlan_station_gui_image.element, 183, 2);
 	gui_element_add_child(&menutree_root_gui_container.element, &menutree_wlan_station_gui_image.element);
 

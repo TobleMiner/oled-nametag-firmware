@@ -34,6 +34,7 @@ DECLARE_EMBEDDED_FILE(resources_html);
 
 DECLARE_EMBEDDED_FILE(battery_21x10_raw);
 DECLARE_EMBEDDED_FILE(wlan_ap_15x12_raw);
-DECLARE_EMBEDDED_FILE(wlan_station_20x12_raw);
+DECLARE_EMBEDDED_FILE(wlan_station_connected_20x12_raw);
+DECLARE_EMBEDDED_FILE(wlan_station_disconnected_20x12_raw);
 
 DECLARE_EMBEDDED_FILE(droidsans_bold_ttf);
