@@ -184,6 +184,17 @@ static menu_entry_app_t menutree_root_settings_wlan_settings_endisable_ap = {
 	.run = wlan_ap_endisable_run
 };
 
+// Root menu - Settings - WLAN Settings - Station info
+static gui_label_t menutree_stainfo_gui_label;
+static menu_entry_app_t menutree_root_settings_wlan_settings_sta_info = {
+	.base = {
+		.name = "stainfo",
+		.parent = &menutree_root_settings_wlan_settings,
+		.gui_element = &menutree_stainfo_gui_label.element
+	},
+	.run = wlan_station_info_run
+};
+
 // Root menu - Settings - WLAN Settings - Enable/Disable station
 static gui_label_t menutree_endisable_station_gui_label;
 static gui_marquee_t menutree_endisable_station_gui_marquee;
@@ -439,6 +450,13 @@ static void gui_element_init(gui_container_t *root) {
 	gui_element_set_size(&menutree_endisable_ap_gui_label.element, 119, 22);
 	gui_element_set_position(&menutree_endisable_ap_gui_label.element, 0, 22);
 
+	// Root menu - Settings - WLAN Settings - Station info
+	gui_label_init(&menutree_stainfo_gui_label, "Station info");
+	gui_label_set_font_size(&menutree_stainfo_gui_label, 15);
+	gui_label_set_text_offset(&menutree_stainfo_gui_label, 3, 2);
+	gui_element_set_size(&menutree_stainfo_gui_label.element, 140, 22);
+	gui_element_set_position(&menutree_stainfo_gui_label.element, 0, 44);
+
 	// Root menu - Settings - WLAN Settings - Enable/Disable station
 	gui_label_init(&menutree_endisable_station_gui_label, "Enable station");
 	gui_label_set_font_size(&menutree_endisable_station_gui_label, 15);
@@ -447,7 +465,7 @@ static void gui_element_init(gui_container_t *root) {
 
 	gui_marquee_init(&menutree_endisable_station_gui_marquee);
 	gui_element_set_size(&menutree_endisable_station_gui_marquee.container.element, 119, 22);
-	gui_element_set_position(&menutree_endisable_station_gui_marquee.container.element, 0, 44);
+	gui_element_set_position(&menutree_endisable_station_gui_marquee.container.element, 0, 66);
 	gui_element_add_child(&menutree_endisable_station_gui_marquee.container.element,
 			      &menutree_endisable_station_gui_label.element);
 
@@ -570,6 +588,10 @@ static void menu_element_init(void) {
 	// Root menu - Settings - WLAN Settings - Enable/Disable AP
 	menu_entry_app_init(&menutree_root_settings_wlan_settings_endisable_ap);
 	menu_entry_submenu_add_entry(&menutree_root_settings_wlan_settings, &menutree_root_settings_wlan_settings_endisable_ap.base);
+
+	// Root menu - Settings - WLAN Settings - Station info
+	menu_entry_app_init(&menutree_root_settings_wlan_settings_sta_info);
+	menu_entry_submenu_add_entry(&menutree_root_settings_wlan_settings, &menutree_root_settings_wlan_settings_sta_info.base);
 
 	// Root menu - Settings - WLAN Settings - Enable/Disable statiob
 	menu_entry_app_init(&menutree_root_settings_wlan_settings_endisable_station);
