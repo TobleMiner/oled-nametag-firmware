@@ -34,6 +34,7 @@
 #include "power.h"
 #include "scheduler.h"
 #include "settings.h"
+#include "vendor.h"
 #include "webserver.h"
 #include "wlan_settings.h"
 #include "wlan.h"
@@ -161,6 +162,9 @@ void app_main(void)
 
 	// Setup settings in NVS
 	settings_init();
+
+	// Setup vendor data
+	vendor_init();
 
 	// Setup WLAN
 	wlan_init();

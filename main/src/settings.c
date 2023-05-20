@@ -187,6 +187,22 @@ bool settings_get_wlan_station_enable(void) {
 	return nvs_get_bool("WlanStaEn", false);
 }
 
+void settings_set_wlan_station_ssid(const char *str) {
+	nvs_set_string("WlanStaSsid", str);
+}
+
+char *settings_get_wlan_station_ssid(void) {
+	return nvs_get_string("WlanStaSsid");
+}
+
+void settings_set_wlan_station_psk(const char *str) {
+	nvs_set_string("WlanStaPsk", str);
+}
+
+char *settings_get_wlan_station_psk(void) {
+	return nvs_get_string("WlanStaPsk");
+}
+
 void settings_set_serial_number(const char *str) {
 	nvs_set_string("Serial", str);
 }
