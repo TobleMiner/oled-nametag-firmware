@@ -93,3 +93,5 @@ esp_err_t xlate_err(int err);
 #ifndef XSTRINGIFY
 #define XSTRINGIFY(str) STRINGIFY(str)
 #endif
+
+int strcmp_null(const void *a, const void *b);

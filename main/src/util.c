@@ -1,6 +1,7 @@
 #include "util.h"
 
 #include <errno.h>
+#include <string.h>
 
 void strntr(char* str, size_t len, char a, char b) {
 	while(len-- > 0) {
@@ -47,3 +48,18 @@ esp_err_t xlate_err(int err) {
 	return ESP_FAIL;
 }
 
+int strcmp_null(const void *a, const void *b) {
+	if (!a && !b) {
+		return 0;
+	}
+
+	if (!a) {
+		return -1;
+	}
+
+	if (!b) {
+		return 1;
+	}
+
+	return strcmp(a, b);
+}
