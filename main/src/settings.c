@@ -186,3 +186,11 @@ void settings_set_wlan_station_enable(bool enable) {
 bool settings_get_wlan_station_enable(void) {
 	return nvs_get_bool("WlanStaEn", false);
 }
+
+void settings_set_serial_number(const char *str) {
+	nvs_set_string("Serial", str);
+}
+
+char *settings_get_serial_number(void) {
+	return nvs_get_string("Serial");
+}

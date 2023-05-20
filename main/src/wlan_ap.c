@@ -16,11 +16,13 @@
 
 #include "event_bus.h"
 #include "settings.h"
+#include "util.h"
+#include "vendor.h"
 #include "wlan.h"
 
 #define PSK_LENGTH 10
 
-#define WLAN_AP_SSID		"oled-nametag"
+#define WLAN_AP_SSID_PREFIX	"oled badge "
 #define WLAN_AP_CHANNEL		6
 #define WLAN_AP_MAX_STATIONS	3
 
@@ -33,11 +35,13 @@ static esp_netif_t *wlan_ap_iface;
 static StaticSemaphore_t ap_lock_buffer;
 static SemaphoreHandle_t ap_lock;
 
-static const char *wlan_ap_ssid = WLAN_AP_SSID;
+static char *wlan_ap_ssid = NULL;
 static char *wlan_ap_psk = NULL;
 
 static bool wlan_ap_active = false;
 static bool wlan_ap_enabled = false;
+
+static wifi_sta_list_t station_list;
 
 void wlan_ap_lock(void) {
 	xSemaphoreTakeRecursive(ap_lock, portMAX_DELAY);
@@ -97,11 +101,28 @@ static void load_psk_(void) {
 	}
 }
 
+static void generate_ssid_(void) {
+	char *ap_ssid;
+	const char *serial;
+	unsigned int ssid_len;
+
+	vendor_lock();
+	serial = vendor_get_serial_number_();
+	ssid_len = strlen(WLAN_AP_SSID_PREFIX) + strlen(serial) + 1;
+	ap_ssid = calloc(1, ssid_len);
+	if (ap_ssid) {
+		snprintf(ap_ssid, ssid_len, "%s%s", WLAN_AP_SSID_PREFIX, serial);
+		if (wlan_ap_ssid) {
+			free(wlan_ap_ssid);
+		}
+		wlan_ap_ssid = ap_ssid;
+	}
+	vendor_unlock();
+}
+
 static void enable_ap_(void) {
 	wifi_config_t wifi_config = {
 		.ap = {
-			.ssid = WLAN_AP_SSID,
-			.ssid_len = strlen(WLAN_AP_SSID),
 			.channel = WLAN_AP_CHANNEL,
 			.max_connection = WLAN_AP_MAX_STATIONS,
 			.authmode = WIFI_AUTH_WPA_WPA2_PSK,
@@ -111,6 +132,10 @@ static void enable_ap_(void) {
 			},
 		},
 	};
+	const char *ssid = STR_NULL(wlan_ap_ssid);
+
+	strncpy((char *)wifi_config.ap.ssid, ssid, sizeof(wifi_config.ap.ssid) - 1);
+	wifi_config.ap.ssid_len = strlen(ssid);
 
 	wlan_ap_enabled = true;
 	if (wlan_ap_psk) {
@@ -141,11 +166,14 @@ void wlan_ap_init(void) {
 
 	wlan_ap_iface = esp_netif_create_default_wifi_ap();
 	ESP_ERROR_CHECK(!wlan_ap_iface);
-	esp_netif_set_hostname(wlan_ap_iface, "oled-nametag");
+	vendor_lock();
+	esp_netif_set_hostname(wlan_ap_iface, vendor_get_hostname_());
+	vendor_unlock();
 	esp_netif_dhcps_option(wlan_ap_iface, ESP_NETIF_OP_SET, ESP_NETIF_ROUTER_SOLICITATION_ADDRESS, &dhcps_flag_false, sizeof(dhcps_flag_false));
 	esp_netif_dhcps_option(wlan_ap_iface, ESP_NETIF_OP_SET, ESP_NETIF_DOMAIN_NAME_SERVER, &dhcps_flag_false, sizeof(dhcps_flag_false));
 
 	load_psk_();
+	generate_ssid_();
 	if (settings_get_wlan_ap_enable()) {
 		enable_ap_();
 	}
@@ -201,4 +229,18 @@ bool wlan_ap_is_active(void) {
 
 bool wlan_ap_is_enabled(void) {
 	return wlan_ap_enabled;
+}
+
+unsigned int wlan_ap_get_num_connected_stations(void) {
+	esp_err_t err;
+	unsigned int num_stations = 0;
+
+	wlan_ap_lock();
+	err = esp_wifi_ap_get_sta_list(&station_list);
+	if (!err && station_list.num >= 0) {
+		num_stations = station_list.num;
+	}
+	wlan_ap_unlock();
+
+	return num_stations;
 }

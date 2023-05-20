@@ -24,3 +24,6 @@ bool settings_get_adaptive_display_brightness_enable(void);
 
 void settings_set_wlan_station_enable(bool enable);
 bool settings_get_wlan_station_enable(void);
+
+void settings_set_serial_number(const char *str);
+char *settings_get_serial_number(void);
