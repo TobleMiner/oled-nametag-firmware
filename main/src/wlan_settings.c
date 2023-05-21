@@ -350,9 +350,9 @@ int wlan_station_endisable_run(menu_cb_f exit_cb, void *cb_ctx, void *priv) {
 	gui_element_show(&wait_modal_container.element);
 	wlan_station_lock();
 	if (wlan_station_is_enabled()) {
-		wlan_station_disable_();
+		wlan_station_disable();
 	} else {
-		wlan_station_enable_();
+		wlan_station_enable();
 	}
 	wlan_station_unlock();
 	gui_element_set_hidden(&wait_modal_container.element, true);

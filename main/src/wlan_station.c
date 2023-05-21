@@ -216,6 +216,26 @@ static void ip_event_handler(void *arg, esp_event_base_t event_base,
 	}
 }
 
+static void wlan_station_enable_(void) {
+	wifi_config_t wifi_config = { 0 };
+
+	if (sta_ssid && sta_psk) {
+		strncpy((char *)wifi_config.sta.ssid, sta_ssid, sizeof(wifi_config.sta.ssid) - 1);
+		strncpy((char *)wifi_config.sta.password, sta_psk, sizeof(wifi_config.sta.password) - 1);
+	}
+
+	sta_enabled = true;
+	scheduler_abort_task(&scan_task);
+	sta_connected = false;
+	wlan_stop();
+	wlan_reconfigure();
+	ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+	wlan_start();
+	scan_in_progress = false;
+	event_bus_notify("wlan_station", NULL);
+	wlan_station_schedule_scan(0);
+}
+
 void wlan_station_init() {
 	sta_lock = xSemaphoreCreateRecursiveMutexStatic(&sta_lock_buffer);
 
@@ -238,7 +258,7 @@ void wlan_station_init() {
 
 	sta_enabled = settings_get_wlan_station_enable();
 	if (sta_enabled) {
-		wlan_station_enable();
+		wlan_station_enable_();
 	}
 }
 
@@ -258,9 +278,22 @@ void wlan_station_unlock() {
 	xSemaphoreGiveRecursive(sta_lock);
 }
 
+static void wlan_station_disable_(void) {
+	if (sta_enabled) {
+		sta_enabled = false;
+		sta_connected = false;
+		scheduler_abort_task(&scan_task);
+		wlan_restart();
+		scan_in_progress = false;
+		event_bus_notify("wlan_station", NULL);
+	}
+}
+
 static void wlan_station_reconfigure_(void) {
-	wlan_station_disable_();
-	wlan_station_enable_();
+	if (sta_enabled) {
+		wlan_station_disable_();
+		wlan_station_enable_();
+	}
 }
 
 static void wlan_station_set_ssid_(const char *ssid) {
@@ -307,48 +340,17 @@ void wlan_station_set_psk(const char *psk) {
 	wlan_station_unlock();
 }
 
-void wlan_station_enable_(void) {
-	wifi_config_t wifi_config = { 0 };
-
-	if (sta_ssid && sta_psk) {
-		strncpy((char *)wifi_config.sta.ssid, sta_ssid, sizeof(wifi_config.sta.ssid) - 1);
-		strncpy((char *)wifi_config.sta.password, sta_psk, sizeof(wifi_config.sta.password) - 1);
-	}
-
-	sta_enabled = true;
-	scheduler_abort_task(&scan_task);
-	sta_connected = false;
-	wlan_stop();
-	wlan_reconfigure();
-	ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-	wlan_start();
-	scan_in_progress = false;
-	settings_set_wlan_station_enable(true);
-	event_bus_notify("wlan_station", NULL);
-	wlan_station_schedule_scan(0);
-}
-
-void wlan_station_disable_(void) {
-	if (sta_enabled) {
-		sta_enabled = false;
-		sta_connected = false;
-		scheduler_abort_task(&scan_task);
-		wlan_restart();
-		scan_in_progress = false;
-		settings_set_wlan_station_enable(false);
-		event_bus_notify("wlan_station", NULL);
-	}
-}
-
 void wlan_station_enable() {
 	wlan_station_lock();
 	wlan_station_enable_();
+	settings_set_wlan_station_enable(true);
 	wlan_station_unlock();
 }
 
 void wlan_station_disable() {
 	wlan_station_lock();
 	wlan_station_disable_();
+	settings_set_wlan_station_enable(false);
 	wlan_station_unlock();
 }
 
