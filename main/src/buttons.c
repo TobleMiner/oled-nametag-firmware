@@ -380,7 +380,7 @@ void buttons_init() {
 	for (i = 0; i < ARRAY_SIZE(buttons); i++) {
 		const button_def_t *def = &buttons[i];
 		gpio_config_t button_cfg = {
-			.pin_bit_mask = 1 << def->gpio,
+			.pin_bit_mask = 1ULL << def->gpio,
 			.mode = GPIO_MODE_INPUT,
 			.pull_up_en = def->active_low ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE,
 			.pull_down_en = def->active_low ? GPIO_PULLDOWN_DISABLE : GPIO_PULLDOWN_ENABLE,
