@@ -41,7 +41,7 @@ static void set_serial_number_(const char *serial) {
 void vendor_init(void) {
 	char *serial;
 
-	lock = xSemaphoreCreateMutexStatic(&lock_buffer);
+	lock = xSemaphoreCreateRecursiveMutexStatic(&lock_buffer);
 
 	serial = settings_get_serial_number();
 	set_serial_number_(serial);
@@ -51,11 +51,11 @@ void vendor_init(void) {
 }
 
 void vendor_lock(void) {
-	xSemaphoreTake(lock, portMAX_DELAY);
+	xSemaphoreTakeRecursive(lock, portMAX_DELAY);
 }
 
 void vendor_unlock(void) {
-	xSemaphoreGive(lock);
+	xSemaphoreGiveRecursive(lock);
 }
 
 void vendor_set_serial_number(const char *serial) {
