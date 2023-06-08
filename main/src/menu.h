@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 
+#include "buttons.h"
 #include "gui.h"
 #include "list.h"
 
