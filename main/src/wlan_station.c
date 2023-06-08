@@ -44,6 +44,8 @@ static scheduler_task_t scan_task;
 static char *sta_ssid = NULL;
 static char *sta_psk = NULL;
 
+static event_bus_handler_t vendor_event_handler;
+
 static esp_err_t wlan_station_start_scan_(void) {
 	if (!scan_in_progress) {
 		esp_err_t err;
@@ -236,6 +238,12 @@ static void wlan_station_enable_(void) {
 	wlan_station_schedule_scan(0);
 }
 
+static void on_vendor_event(void *priv, void *data) {
+	vendor_lock();
+	esp_netif_set_hostname(wlan_sta_iface, vendor_get_hostname_());
+	vendor_unlock();
+}
+
 void wlan_station_init() {
 	sta_lock = xSemaphoreCreateRecursiveMutexStatic(&sta_lock_buffer);
 
@@ -260,6 +268,7 @@ void wlan_station_init() {
 	if (sta_enabled) {
 		wlan_station_enable_();
 	}
+	event_bus_subscribe(&vendor_event_handler, "vendor", on_vendor_event, NULL);
 }
 
 bool wlan_station_is_enabled() {
