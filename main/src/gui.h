@@ -6,7 +6,6 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 
-#include "buttons.h"
 #include "list.h"
 
 typedef struct gui_point {
