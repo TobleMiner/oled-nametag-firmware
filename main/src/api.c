@@ -12,6 +12,7 @@
 #include "httpd_util.h"
 #include "util.h"
 #include "vendor.h"
+#include "wlan_station.h"
 
 static const char *TAG = "api";
 
@@ -216,6 +217,27 @@ static esp_err_t http_get_delete_animation(struct httpd_request_ctx* ctx, void* 
 	return ESP_OK;
 }
 
+static esp_err_t http_get_set_wlan_station_ssid_psk(struct httpd_request_ctx* ctx, void *priv) {
+	ssize_t param_len;
+	char *ssid, *psk;
+	const char *current_animation_path;
+	esp_err_t err;
+
+	if((param_len = httpd_query_string_get_param(ctx, "ssid", &ssid)) <= 0) {
+		return httpd_send_error(ctx, HTTPD_400);
+	}
+
+	if((param_len = httpd_query_string_get_param(ctx, "psk", &psk)) <= 0) {
+		return httpd_send_error(ctx, HTTPD_400);
+	}
+
+	wlan_station_set_ssid(ssid);
+	wlan_station_set_psk(psk);
+
+	httpd_finalize_response(ctx);
+	return ESP_OK;
+}
+
 static esp_err_t http_get_set_serial(struct httpd_request_ctx* ctx, void *priv) {
 	ssize_t param_len;
 	char *serial;
@@ -238,5 +260,6 @@ void api_init(httpd_t *httpd) {
 	ESP_ERROR_CHECK(httpd_add_get_handler(httpd, "/api/v1/set_animation", http_get_set_animation, NULL, 1, "filename"));
 	ESP_ERROR_CHECK(httpd_add_get_handler(httpd, "/api/v1/delete_animation", http_get_delete_animation, NULL, 1, "filename"));
 
+	ESP_ERROR_CHECK(httpd_add_get_handler(httpd, "/api/v1/wlan/set_station_ssid_psk", http_get_set_wlan_station_ssid_psk, NULL, 2, "ssid", "psk"));
 	ESP_ERROR_CHECK(httpd_add_get_handler(httpd, "/api/v1/vendor/set_serial", http_get_set_serial, NULL, 1, "serial"));
 }
