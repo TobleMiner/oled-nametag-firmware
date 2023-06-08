@@ -11,6 +11,7 @@
 #include "gifplayer.h"
 #include "httpd_util.h"
 #include "util.h"
+#include "vendor.h"
 
 static const char *TAG = "api";
 
@@ -215,9 +216,27 @@ static esp_err_t http_get_delete_animation(struct httpd_request_ctx* ctx, void* 
 	return ESP_OK;
 }
 
+static esp_err_t http_get_set_serial(struct httpd_request_ctx* ctx, void *priv) {
+	ssize_t param_len;
+	char *serial;
+	const char *current_animation_path;
+	esp_err_t err;
+
+	if((param_len = httpd_query_string_get_param(ctx, "serial", &serial)) <= 0) {
+		return httpd_send_error(ctx, HTTPD_400);
+	}
+
+	vendor_set_serial_number(serial);
+
+	httpd_finalize_response(ctx);
+	return ESP_OK;
+}
+
 void api_init(httpd_t *httpd) {
 	ESP_ERROR_CHECK(httpd_add_post_handler(httpd, "/api/v1/upload_animation", http_post_upload_animation, NULL, 1, "filename"));
 	ESP_ERROR_CHECK(httpd_add_get_handler(httpd, "/api/v1/animations", http_get_animations, NULL, 0));
 	ESP_ERROR_CHECK(httpd_add_get_handler(httpd, "/api/v1/set_animation", http_get_set_animation, NULL, 1, "filename"));
 	ESP_ERROR_CHECK(httpd_add_get_handler(httpd, "/api/v1/delete_animation", http_get_delete_animation, NULL, 1, "filename"));
+
+	ESP_ERROR_CHECK(httpd_add_get_handler(httpd, "/api/v1/vendor/set_serial", http_get_set_serial, NULL, 1, "serial"));
 }
