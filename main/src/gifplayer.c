@@ -356,7 +356,7 @@ static void gui_gifplayer_draw_frame(GIFDRAW *draw) {
 
 	if (y < element->area.size.y) {
 		int x;
-		int draw_width = MIN(draw->iWidth, element->area.size.x);
+		int draw_width = MIN(draw->iX + draw->iWidth, element->area.size.x);
 
 		for (x = draw->iX; x < draw_width; x++) {
 			if (draw->pPixels[x - draw->iX] == draw->ucTransparent && draw->ucDisposalMethod == 2) {
