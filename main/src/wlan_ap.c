@@ -43,6 +43,8 @@ static bool wlan_ap_enabled = false;
 
 static wifi_sta_list_t station_list;
 
+static event_bus_handler_t vendor_event_handler;
+
 void wlan_ap_lock(void) {
 	xSemaphoreTakeRecursive(ap_lock, portMAX_DELAY);
 }
@@ -161,6 +163,21 @@ static void disable_ap_(void) {
 	event_bus_notify("wlan_ap", NULL);
 }
 
+static void on_vendor_event(void *priv, void *data) {
+	vendor_lock();
+	esp_netif_set_hostname(wlan_ap_iface, vendor_get_hostname_());
+	vendor_unlock();
+	wlan_ap_lock();
+	if (wlan_ap_active) {
+		disable_ap_();
+		generate_ssid_();
+		enable_ap_();
+	} else {
+		generate_ssid_();
+	}
+	wlan_ap_unlock();
+}
+
 void wlan_ap_init(void) {
 	ap_lock = xSemaphoreCreateRecursiveMutexStatic(&ap_lock_buffer);
 
@@ -177,6 +194,7 @@ void wlan_ap_init(void) {
 	if (settings_get_wlan_ap_enable()) {
 		enable_ap_();
 	}
+	event_bus_subscribe(&vendor_event_handler, "vendor", on_vendor_event, NULL);
 }
 
 const char *wlan_ap_get_ssid_(void) {
