@@ -9,17 +9,17 @@
 #include "util.h"
 
 void dirent_cache_init(dirent_cache_t *cache) {
-	cache->lock = xSemaphoreCreateMutexStatic(&cache->lock_buffer);
+	cache->lock = xSemaphoreCreateRecursiveMutexStatic(&cache->lock_buffer);
 	cache->cache = NULL;
 	cache->cache_size = 0;
 }
 
 void dirent_cache_lock(dirent_cache_t *cache) {
-	xSemaphoreTake(cache->lock, portMAX_DELAY);
+	xSemaphoreTakeRecursive(cache->lock, portMAX_DELAY);
 }
 
 void dirent_cache_unlock(dirent_cache_t *cache) {
-	xSemaphoreGive(cache->lock);
+	xSemaphoreGiveRecursive(cache->lock);
 }
 
 static int iterate_dir(const char *path, char *cache, size_t *cache_size) {
