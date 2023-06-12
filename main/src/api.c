@@ -31,7 +31,7 @@ static esp_err_t http_post_upload_animation(struct httpd_request_ctx* ctx, void*
 	char* fname;
 	char* abspath;
 	bool animation_switch_required = false;
-	const char *current_animation_path;
+	const char *current_animation_name;
 
 	if((param_len = httpd_query_string_get_param(ctx, "filename", &fname)) <= 0) {
 		return httpd_send_error(ctx, HTTPD_400);
@@ -50,9 +50,10 @@ static esp_err_t http_post_upload_animation(struct httpd_request_ctx* ctx, void*
 		goto out_locked;
 	}
 
-	current_animation_path = gifplayer_get_path_of_playing_animation_();
-	if (!current_animation_path || !strcmp(fname, current_animation_path)) {
+	current_animation_name = gifplayer_get_name_of_playing_animation_();
+	if (!current_animation_name || !strcmp(fname, current_animation_name)) {
 		ESP_LOGI(TAG, "Modifying currently active animation!");
+		gifplayer_stop_playback();
 		animation_switch_required = true;
 	}
 
@@ -186,7 +187,7 @@ static esp_err_t http_get_delete_animation(struct httpd_request_ctx* ctx, void* 
 	ssize_t param_len;
 	char* fname;
 	char* abspath;
-	const char *current_animation_path;
+	const char *current_animation_name;
 	esp_err_t err;
 
 	if((param_len = httpd_query_string_get_param(ctx, "filename", &fname)) <= 0) {
@@ -199,8 +200,8 @@ static esp_err_t http_get_delete_animation(struct httpd_request_ctx* ctx, void* 
 	}
 
 	gifplayer_lock();
-	current_animation_path = gifplayer_get_path_of_playing_animation_();
-	if (current_animation_path && !strcmp(fname, current_animation_path)) {
+	current_animation_name = gifplayer_get_name_of_playing_animation_();
+	if (current_animation_name && !strcmp(fname, current_animation_name)) {
 		ESP_LOGI(TAG, "Deleting currently active animation!");
 		gifplayer_stop_playback();
 	}
@@ -220,7 +221,6 @@ static esp_err_t http_get_delete_animation(struct httpd_request_ctx* ctx, void* 
 static esp_err_t http_get_set_wlan_station_ssid_psk(struct httpd_request_ctx* ctx, void *priv) {
 	ssize_t param_len;
 	char *ssid, *psk;
-	const char *current_animation_path;
 	esp_err_t err;
 
 	if((param_len = httpd_query_string_get_param(ctx, "ssid", &ssid)) <= 0) {
@@ -241,7 +241,6 @@ static esp_err_t http_get_set_wlan_station_ssid_psk(struct httpd_request_ctx* ct
 static esp_err_t http_get_set_serial(struct httpd_request_ctx* ctx, void *priv) {
 	ssize_t param_len;
 	char *serial;
-	const char *current_animation_path;
 	esp_err_t err;
 
 	if((param_len = httpd_query_string_get_param(ctx, "serial", &serial)) <= 0) {
