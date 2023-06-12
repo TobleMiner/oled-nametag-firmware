@@ -4,7 +4,8 @@
 
 #include "menu.h"
 
-void power_init(void);
+void power_early_init(void);
+void power_late_init(void);
 void power_on(void);
 void power_off(void);
 bool power_is_usb_connected(void);

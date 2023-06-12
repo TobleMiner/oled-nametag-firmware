@@ -78,13 +78,6 @@ static void fb_convert_grayscale(uint8_t *stuffed_4bit, const uint8_t *grayscale
 
 gui_t gui;
 
-static button_event_handler_t reset_button_event_handler;
-static bool handle_reset_button_press(const button_event_t *event, void *priv) {
-	ESP_LOGI(TAG, "Reset button pressed");
-	esp_restart();
-	return false;
-}
-
 TaskHandle_t main_task;
 
 static void gui_request_render(const gui_t *gui) {
@@ -138,7 +131,7 @@ void app_main(void)
 	esp_err_t ret;
 
 	// Ensure we keep the lights on
-	power_init();
+	power_early_init();
 
 	// Initialize the display
 	oled_init();
@@ -174,17 +167,9 @@ void app_main(void)
 
 	// Setup buttons
 	buttons_init();
-	const button_event_handler_single_user_cfg_t reset_button_cfg = {
-		.base = {
-			.cb = handle_reset_button_press,
-		},
-		.single = {
-			.button = BUTTON_EXIT,
-			.action = BUTTON_ACTION_HOLD,
-			.min_hold_duration_ms = 3000,
-		}
-	};
-	buttons_register_single_button_event_handler(&reset_button_event_handler, &reset_button_cfg);
+
+	// Setup power button
+	power_late_init();
 
 	// Load fonts
 	fonts_init();

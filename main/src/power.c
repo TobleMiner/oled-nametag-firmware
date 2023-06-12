@@ -20,7 +20,15 @@ static adc_oneshot_unit_handle_t adc_handle;
 static adc_cali_handle_t adc_cal_handle;
 #endif
 
-void power_init(void) {
+static button_event_handler_t shutdown_button_event_handler;
+
+static bool handle_shutdown_button_press(const button_event_t *event, void *priv) {
+	power_off();
+
+	return true;
+}
+
+void power_early_init(void) {
 #ifndef GPIO_USB_DET
 	const adc_oneshot_unit_init_cfg_t adc_config = {
 		.unit_id = ADC_USB_DET,
@@ -46,6 +54,22 @@ void power_init(void) {
 	ESP_ERROR_CHECK(adc_oneshot_config_channel(adc_handle, ADC_CHANNEL_USB_DET, &adc_channel_config));
 	ESP_ERROR_CHECK(adc_cali_create_scheme_curve_fitting(&adc_cal_config, &adc_cal_handle));
 #endif
+}
+
+void power_late_init(void) {
+	const button_event_handler_single_user_cfg_t shutdown_button_cfg = {
+		.base = {
+			.cb = handle_shutdown_button_press,
+		},
+		.single = {
+			.button = BUTTON_EXIT,
+			.action = BUTTON_ACTION_HOLD,
+			.min_hold_duration_ms = 5000,
+		}
+	};
+
+	buttons_register_single_button_event_handler(&shutdown_button_event_handler, &shutdown_button_cfg);
+	buttons_enable_event_handler(&shutdown_button_event_handler);
 }
 
 void power_on(void) {
