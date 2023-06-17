@@ -20,6 +20,7 @@
 #include "wlan_ap.h"
 #include "wlan_settings.h"
 #include "wlan_station.h"
+#include "accept_all_the_cookies.h"
 
 static const char *TAG = "menutree";
 
@@ -102,6 +103,17 @@ static menu_entry_app_t menutree_root_applications_bms_status = {
 		.gui_element = &menutree_bms_status_gui_label.element
 	},
 	.run = bms_details_run
+};
+
+// Root menu - Applications - Cookies
+static gui_label_t menutree_cookies_gui_label;
+static menu_entry_app_t menutree_root_applications_cookies = {
+	.base = {
+		.name = "cookies",
+		.parent = &menutree_root_applications,
+		.gui_element = &menutree_cookies_gui_label.element
+	},
+	.run = accept_all_the_cookies_run
 };
 
 // Root menu - Settings - Display Settings
@@ -413,6 +425,13 @@ static void gui_element_init(gui_container_t *root) {
 	gui_element_set_size(&menutree_bms_status_gui_label.element, 132, 20);
 	gui_element_set_position(&menutree_bms_status_gui_label.element, 0, 44);
 
+	// Root menu - Applications - Cookies
+	gui_label_init(&menutree_cookies_gui_label, "Cookies");
+	gui_label_set_font_size(&menutree_cookies_gui_label, 15);
+	gui_label_set_text_offset(&menutree_cookies_gui_label, 3, 2);
+	gui_element_set_size(&menutree_cookies_gui_label.element, 132, 20);
+	gui_element_set_position(&menutree_cookies_gui_label.element, 0, 64);
+
 	// Root menu - Settings - Display Settings
 	gui_list_init(&menutree_display_settings_gui_list);
 	gui_element_set_size(&menutree_display_settings_gui_list.container.element, MENU_LIST_WIDTH, MENU_LIST_HEIGHT);
@@ -598,6 +617,10 @@ static void menu_element_init(void) {
 	// Root menu - Applications - BMS status
 	menu_entry_app_init(&menutree_root_applications_bms_status);
 	menu_entry_submenu_add_entry(&menutree_root_applications, &menutree_root_applications_bms_status.base);
+
+	// Root menu - Applications - Cookies
+	menu_entry_app_init(&menutree_root_applications_cookies);
+	menu_entry_submenu_add_entry(&menutree_root_applications, &menutree_root_applications_cookies.base);
 
 	// Root menu - Settings - Display Settings
 	menu_entry_submenu_init(&menutree_root_settings_display_settings);

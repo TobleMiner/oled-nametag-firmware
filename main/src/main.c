@@ -12,6 +12,7 @@
 #include "esp_system.h"
 #include "esp_timer.h"
 
+#include "accept_all_the_cookies.h"
 #include "api.h"
 #include "ambient_light_sensor.h"
 #include "battery_gauge.h"
@@ -200,6 +201,9 @@ void app_main(void)
 
 	// Initialize BMS status app
 	bms_details_init(&gui);
+
+	// Initialize all cookies (GPN21)
+	accept_all_the_cookies_init(&gui);
 
 	// Setup menu
 	menu = menutree_init(&gui.container, &gui);
