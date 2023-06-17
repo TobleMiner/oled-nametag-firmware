@@ -12,6 +12,7 @@
 #include "embedded_files.h"
 #include "event_bus.h"
 #include "gifplayer.h"
+#include "github_release_ota.h"
 #include "i2c_bus.h"
 #include "power.h"
 #include "settings.h"
@@ -230,6 +231,17 @@ static menu_entry_app_t menutree_root_settings_system_settings_disable_i2c = {
 		.gui_element = &menutree_disable_i2c_gui_label.element
 	},
 	.run = i2c_bus_disable_run
+};
+
+// Root menu - Settings - System Settings - GitHub OTA
+static gui_label_t menutree_github_ota_gui_label;
+static menu_entry_app_t menutree_root_settings_system_settings_github_ota = {
+	.base = {
+		.name = NULL,
+		.parent = &menutree_root_settings_system_settings,
+		.gui_element = &menutree_github_ota_gui_label.element
+	},
+	.run = github_release_ota_run
 };
 
 // Vertical separator
@@ -517,6 +529,13 @@ static void gui_element_init(gui_container_t *root) {
 	gui_label_set_text_offset(&menutree_disable_i2c_gui_label, 3, 3);
 	gui_element_set_size(&menutree_disable_i2c_gui_label.element, 119, 22);
 
+	// Root menu - Settings - System Settings - GitHub OTA
+	gui_label_init(&menutree_github_ota_gui_label, "GitHub OTA");
+	gui_label_set_font_size(&menutree_github_ota_gui_label, 15);
+	gui_label_set_text_offset(&menutree_github_ota_gui_label, 3, 3);
+	gui_element_set_size(&menutree_github_ota_gui_label.element, 119, 22);
+	gui_element_set_position(&menutree_github_ota_gui_label.element, 0, 22);
+
 	// Vertical separator
 	gui_rectangle_init(&menutree_vertical_separator);
 	gui_rectangle_set_color(&menutree_vertical_separator, 255);
@@ -661,6 +680,10 @@ static void menu_element_init(void) {
 	// Root menu - Settings - System Settings - Disable I2C
 	menu_entry_app_init(&menutree_root_settings_system_settings_disable_i2c);
 	menu_entry_submenu_add_entry(&menutree_root_settings_system_settings, &menutree_root_settings_system_settings_disable_i2c.base);
+
+	// Root menu - Settings - System Settings - GitHub OTA
+	menu_entry_app_init(&menutree_root_settings_system_settings_github_ota);
+	menu_entry_submenu_add_entry(&menutree_root_settings_system_settings, &menutree_root_settings_system_settings_github_ota.base);
 }
 
 static menu_t menutree_menu;
