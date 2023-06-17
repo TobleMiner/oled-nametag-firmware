@@ -22,7 +22,7 @@ typedef struct cbjson_value {
 	};
 } cbjson_value_t;
 
-typedef void (*cbjson_path_cb_f)(const cbjson_value_t *value, void *priv);
+typedef int (*cbjson_path_cb_f)(const cbjson_value_t *value, void *priv);
 
 typedef struct cbjson_path {
 	struct list_head list;

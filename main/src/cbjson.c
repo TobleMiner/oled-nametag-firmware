@@ -388,18 +388,25 @@ static bool match_path(cbjson_t *cbj, cbjson_path_t *path) {
 	return true;
 }
 
-static void process_end_of_literal(cbjson_t *cbj, const cbjson_value_t *value) {
+static int process_end_of_literal(cbjson_t *cbj, const cbjson_value_t *value) {
 	cbjson_path_t *path;
 
 	LIST_FOR_EACH_ENTRY(path, &cbj->paths, list) {
 		if (match_path(cbj, path)) {
-			path->cb(value, path->priv);
+			int err;
+
+			err = path->cb(value, path->priv);
+			if (err) {
+				return err;
+			}
 		}
 	}
 
 	if (!cbj->in_array) {
 		restore_non_matching_paths(cbj);
 	}
+
+	return 0;
 }
 
 static int process_end_of_string(cbjson_t *cbj) {
@@ -417,7 +424,7 @@ static int process_end_of_string(cbjson_t *cbj) {
 			.string = cbj->strbuf
 		};
 
-		process_end_of_literal(cbj, &str_val);
+		return process_end_of_literal(cbj, &str_val);
 	}
 
 	return CBJSON_OK;
@@ -439,6 +446,7 @@ static int process_char_in_float(cbjson_t *cbj, char c) {
 	cbjson_value_t value_float = {
 		.type = CBJSON_TYPE_FLOAT
 	};
+	int err;
 
 	switch (c) {
 	case '0' ... '9': case '.': case 'e': case '-':
@@ -446,7 +454,10 @@ static int process_char_in_float(cbjson_t *cbj, char c) {
 	default:
 		cbj->in_literal = false;
 #warning Float not supported
-		process_end_of_literal(cbj, &value_float);
+		err = process_end_of_literal(cbj, &value_float);
+		if (err) {
+			return err;
+		}
 		return process_char_outside_literal(cbj, c);
 	}
 
@@ -482,7 +493,10 @@ static int process_char_in_integer(cbjson_t *cbj, char c) {
 			return CBJSON_ERR_INVALID_LITERAL;
 		}
 		value_int.integer = intval;
-		process_end_of_literal(cbj, &value_int);
+		err = process_end_of_literal(cbj, &value_int);
+		if (err) {
+			return err;
+		}
 
 		return process_char_outside_literal(cbj, c);
 	}
@@ -514,7 +528,10 @@ static int process_char_in_boolean(cbjson_t *cbj, char c) {
 		} else {
 			return CBJSON_ERR_INVALID_LITERAL;
 		}
-		process_end_of_literal(cbj, &value_bool);
+		err = process_end_of_literal(cbj, &value_bool);
+		if (err) {
+			return err;
+		}
 
 		return process_char_outside_literal(cbj, c);
 	}
@@ -543,7 +560,10 @@ static int process_char_in_null(cbjson_t *cbj, char c) {
 			return CBJSON_ERR_INVALID_LITERAL;
 		}
 
-		process_end_of_literal(cbj, &value_null);
+		err = process_end_of_literal(cbj, &value_null);
+		if (err) {
+			return err;
+		}
 
 		return process_char_outside_literal(cbj, c);
 	}
@@ -683,7 +703,12 @@ static int process_start_of_object(cbjson_t *cbj) {
 		if (cbj->stack_depth == path->path_depth &&
 		    has_next_component && component.type == CBJSON_PATH_TYPE_DESCEND &&
 		    is_last_component) {
-			path->cb(NULL, path->priv);
+			int err;
+
+			err = path->cb(NULL, path->priv);
+			if (err) {
+				return err;
+			}
 		}
 	}
 
