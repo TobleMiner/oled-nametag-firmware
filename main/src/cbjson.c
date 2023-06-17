@@ -579,7 +579,9 @@ static bool path_match_key(cbjson_path_t *path, unsigned int depth, const char *
 	}
 
 	err = parse_next_path_component(&path_match, &component);
-	assert(!err);
+	if (err) {
+		return false;
+	}
 
 	if (component.type != CBJSON_PATH_TYPE_OBJECT_KEY) {
 		return false;
@@ -665,10 +667,24 @@ static void store_non_matching_paths_in_stack_entry(cbjson_t *cbj, cbjson_stack_
 static int process_start_of_object(cbjson_t *cbj) {
 	int err;
 	cbjson_stack_t *stack_entry;
+	cbjson_path_t *path;
 
 	err = push_stack_entry(cbj, &stack_entry);
 	if (err) {
 		return err;
+	}
+
+	LIST_FOR_EACH_ENTRY(path, &cbj->paths, list) {
+		cbjson_path_component_t component;
+		const char *path_match = path->path_match;
+		bool has_next_component = !parse_next_path_component(&path_match, &component);
+		bool is_last_component = !*path_match;
+
+		if (cbj->stack_depth == path->path_depth &&
+		    has_next_component && component.type == CBJSON_PATH_TYPE_DESCEND &&
+		    is_last_component) {
+			path->cb(NULL, path->priv);
+		}
 	}
 
 	store_non_matching_paths_in_stack_entry(cbj, stack_entry);
