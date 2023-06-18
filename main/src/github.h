@@ -25,3 +25,4 @@ struct github_release_ctx {
 };
 
 esp_err_t github_list_releases(github_release_ctx_t *release, const char *repository, github_release_cb_f cb, void *ctx);
+void github_abort(github_release_ctx_t *release);

@@ -148,3 +148,7 @@ esp_err_t github_list_releases(github_release_ctx_t *release, const char *reposi
 
 	return 0;
 }
+
+void github_abort(github_release_ctx_t *release) {
+	async_http_client_abort(&release->http_client);
+}

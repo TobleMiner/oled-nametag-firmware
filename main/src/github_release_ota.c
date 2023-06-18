@@ -28,8 +28,10 @@ static gui_label_t *ota_labels;
 
 static bool on_button_event(const button_event_t *event, void *priv) {
 	if (event->button == BUTTON_EXIT) {
+		github_abort(&release_ctx);
 		buttons_disable_event_handler(&button_event_handler);
 		gui_element_set_hidden(&app_container.element, true);
+		gui_element_set_hidden(&wait_modal_container.element, true);
 		menu_cb(menu_cb_ctx);
 		return true;
 	}
