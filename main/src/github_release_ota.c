@@ -26,9 +26,31 @@ static github_release_ctx_t release_ctx;
 
 static gui_label_t *ota_labels;
 
+static void remove_ota_labels(void) {
+	ota_http_firmware_update_t *update;
+	int i = 0;
+
+	LIST_FOR_EACH_ENTRY(update, &release_ctx.ota_releases.releases, list) {
+		gui_label_t *label = &ota_labels[i];
+
+		gui_element_remove_child(&app_container.element,
+					 &label->element);
+		i++;
+	}
+
+	free(ota_labels);
+	ota_labels = NULL;
+}
+
 static bool on_button_event(const button_event_t *event, void *priv) {
 	if (event->button == BUTTON_EXIT) {
 		github_abort(&release_ctx);
+		if (ota_labels) {
+			gui_lock(gui);
+			remove_ota_labels();
+			gui_unlock(gui);
+		}
+		ota_http_update_free_releases(&release_ctx.ota_releases);
 		buttons_disable_event_handler(&button_event_handler);
 		gui_element_set_hidden(&app_container.element, true);
 		gui_element_set_hidden(&wait_modal_container.element, true);
@@ -87,7 +109,6 @@ void github_release_ota_init(gui_t *gui_root) {
 }
 
 void ota_cb(github_release_ctx_t *releases, int err, void *ctx) {
-	ota_http_firmware_update_t *update;
 	int i = 0;
 
 	gui_element_set_hidden(&wait_modal_container.element, true);
@@ -104,6 +125,9 @@ void ota_cb(github_release_ctx_t *releases, int err, void *ctx) {
 
 	ota_labels = calloc(LIST_LENGTH(&releases->ota_releases.releases), sizeof(gui_label_t));
 	if (ota_labels) {
+		ota_http_firmware_update_t *update;
+
+		gui_lock(gui);
 		ESP_LOGI(TAG, "Available OTA firmware versions:");
 		LIST_FOR_EACH_ENTRY(update, &releases->ota_releases.releases, list) {
 			gui_label_t *label = &ota_labels[i];
@@ -117,6 +141,7 @@ void ota_cb(github_release_ctx_t *releases, int err, void *ctx) {
 			ESP_LOGI(TAG, "\tFirmware update %s: %s", update->name, update->url);
 			i++;
 		}
+		gui_unlock(gui);
 	}
 
 	gui_element_set_hidden(&app_container.element, false);
@@ -126,6 +151,7 @@ void ota_cb(github_release_ctx_t *releases, int err, void *ctx) {
 int github_release_ota_run(menu_cb_f exit_cb, void *cb_ctx, void *priv) {
 	menu_cb = exit_cb;
 	menu_cb_ctx = cb_ctx;
+	ota_labels = NULL;
 	gui_element_set_hidden(&wait_modal_container.element, false);
 	gui_element_show(&wait_modal_container.element);
 
