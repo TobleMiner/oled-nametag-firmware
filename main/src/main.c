@@ -26,9 +26,11 @@
 #include "flash.h"
 #include "fonts.h"
 #include "gifplayer.h"
+#include "github_release_ota.h"
 #include "gui.h"
 #include "i2c_bus.h"
 #include "menutree.h"
+#include "microphone.h"
 #include "nvs.h"
 #include "oled.h"
 #include "pixelflut/pixelflut.h"
@@ -42,7 +44,7 @@
 
 static const char *TAG = "main";
 
-static pixelflut_t pixelflut;
+//static pixelflut_t pixelflut;
 static uint8_t gui_render_fb[256 * 64];
 
 static inline unsigned int rgb_to_grayscale(const uint8_t *rgb) {
@@ -129,8 +131,6 @@ static uint8_t oled_fb[8192] = { 0 };
 
 void app_main(void)
 {
-	esp_err_t ret;
-
 	// Ensure we keep the lights on
 	power_early_init();
 
@@ -205,6 +205,9 @@ void app_main(void)
 	// Initialize all cookies (GPN21)
 	accept_all_the_cookies_init(&gui);
 
+	// Setup github OTA
+	github_release_ota_init(&gui);
+
 	// Setup menu
 	menu = menutree_init(&gui.container, &gui);
 	if (power_is_usb_connected()) {
@@ -221,13 +224,18 @@ void app_main(void)
 	api_init(httpd);
 	webserver_init(httpd);
 
+/*
 	// Setup pixelflut
 	ESP_ERROR_CHECK(pixelflut_init(&pixelflut, 256, 64, 8192));
 
 	// Start listening
 	ESP_ERROR_CHECK(pixelflut_listen(&pixelflut));
+*/
 	// Start polling input
 	ESP_ERROR_CHECK(xTaskCreate(button_emulator_event_loop, "button_emulator_event_loop", 4096, NULL, 10, NULL) != pdPASS);
+
+	// Initialize audio capture
+//	microphone_init(httpd);
 
 	bool slot = false;
 	int render_ret = -1;
