@@ -19,6 +19,7 @@ void ota_http_update_free_releases(ota_http_ctx_t *ota_http_ctx) {
 	LIST_FOR_EACH_ENTRY_SAFE(cursor, next, &ota_http_ctx->releases, list) {
 		free(cursor->name);
 		free(cursor->url);
+		LIST_DELETE(&cursor->list);
 		free(cursor);
 	}
 }
