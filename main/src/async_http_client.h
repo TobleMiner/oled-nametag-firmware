@@ -21,7 +21,10 @@ typedef struct async_http_client {
 	void *ctx;
 	const async_http_client_ops_t *ops;
 	const char *url;
+	bool abort;
+	bool done;
 } async_http_client_t;
 
 void async_http_client_init(async_http_client_t *client, const async_http_client_ops_t *ops);
 void async_http_client_request(async_http_client_t *client, const char *url, void *ctx);
+void async_http_client_abort(async_http_client_t *client);

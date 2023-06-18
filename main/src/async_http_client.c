@@ -61,25 +61,31 @@ static void async_http_client_run(void *arg) {
 		if (ops->error) {
 			ops->error(client);
 		}
+		client->done = true;
 		return;
 	}
 
 	do {
 		err = esp_http_client_perform(http_client);
-	} while (err == ESP_ERR_HTTP_EAGAIN && esp_timer_get_time() < deadline);
+	} while (err == ESP_ERR_HTTP_EAGAIN &&
+		 esp_timer_get_time() < deadline &&
+		 !client->abort);
 
-	if (err) {
+	if (err || client->abort) {
 		if (ops->error) {
 			ops->error(client);
 		}
 	}
 
 	esp_http_client_cleanup(http_client);
+	client->done = true;
 	vTaskDelete(NULL);
 }
 
 void async_http_client_init(async_http_client_t *client, const async_http_client_ops_t *ops) {
 	client->ops = ops;
+	client->abort = false;
+	client->done = false;
 }
 
 void async_http_client_request(async_http_client_t *client, const char *url, void *ctx) {
@@ -87,4 +93,12 @@ void async_http_client_request(async_http_client_t *client, const char *url, voi
 	client->ctx = ctx;
 	client->task = xTaskCreateStatic(async_http_client_run, "async_http", ASYNC_HTTP_TASK_STACK_DEPTH,
 					 client, 1, client->task_stack, &client->task_buffer);
+}
+
+void async_http_client_abort(async_http_client_t *client) {
+	client->abort = true;
+
+	while (!client->done) {
+		vTaskDelay(1);
+	}
 }
