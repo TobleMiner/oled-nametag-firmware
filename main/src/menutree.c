@@ -11,6 +11,7 @@
 #include "display_settings.h"
 #include "embedded_files.h"
 #include "event_bus.h"
+#include "fft.h"
 #include "gifplayer.h"
 #include "github_release_ota.h"
 #include "i2c_bus.h"
@@ -115,6 +116,17 @@ static menu_entry_app_t menutree_root_applications_cookies = {
 		.gui_element = &menutree_cookies_gui_label.element
 	},
 	.run = accept_all_the_cookies_run
+};
+
+// Root menu - Applications - FFT
+static gui_label_t menutree_fft_gui_label;
+static menu_entry_app_t menutree_root_applications_fft = {
+	.base = {
+		.name = "fft",
+		.parent = &menutree_root_applications,
+		.gui_element = &menutree_fft_gui_label.element
+	},
+	.run = fft_run
 };
 
 // Root menu - Settings - Display Settings
@@ -444,6 +456,13 @@ static void gui_element_init(gui_container_t *root) {
 	gui_element_set_size(&menutree_cookies_gui_label.element, 132, 20);
 	gui_element_set_position(&menutree_cookies_gui_label.element, 0, 64);
 
+	// Root menu - Applications - FFT
+	gui_label_init(&menutree_fft_gui_label, "FFT");
+	gui_label_set_font_size(&menutree_fft_gui_label, 15);
+	gui_label_set_text_offset(&menutree_fft_gui_label, 3, 2);
+	gui_element_set_size(&menutree_fft_gui_label.element, 132, 20);
+	gui_element_set_position(&menutree_fft_gui_label.element, 0, 84);
+
 	// Root menu - Settings - Display Settings
 	gui_list_init(&menutree_display_settings_gui_list);
 	gui_element_set_size(&menutree_display_settings_gui_list.container.element, MENU_LIST_WIDTH, MENU_LIST_HEIGHT);
@@ -640,6 +659,10 @@ static void menu_element_init(void) {
 	// Root menu - Applications - Cookies
 	menu_entry_app_init(&menutree_root_applications_cookies);
 	menu_entry_submenu_add_entry(&menutree_root_applications, &menutree_root_applications_cookies.base);
+
+	// Root menu - Applications - FFT
+	menu_entry_app_init(&menutree_root_applications_fft);
+	menu_entry_submenu_add_entry(&menutree_root_applications, &menutree_root_applications_fft.base);
 
 	// Root menu - Settings - Display Settings
 	menu_entry_submenu_init(&menutree_root_settings_display_settings);

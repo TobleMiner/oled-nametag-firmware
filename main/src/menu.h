@@ -43,6 +43,7 @@ typedef struct menu_entry_app {
 typedef struct menu_cbs {
 	void (*on_app_entry)(const menu_t *menu, const menu_entry_app_t *app, void *ctx);
 	void (*on_app_exit)(const menu_t *menu, void *ctx);
+	void (*on_menu_exit)(void *ctx);
 } menu_cbs_t;
 
 struct menu {

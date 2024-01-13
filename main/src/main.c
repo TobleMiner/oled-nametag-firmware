@@ -23,6 +23,7 @@
 #include "display_settings.h"
 #include "embedded_files.h"
 #include "event_bus.h"
+#include "fft.h"
 #include "flash.h"
 #include "fonts.h"
 #include "gifplayer.h"
@@ -205,6 +206,9 @@ void app_main(void)
 	// Initialize all cookies (GPN21)
 	accept_all_the_cookies_init(&gui);
 
+	// Initialize FFT (GPN21)
+	fft_init(&gui);
+
 	// Setup github OTA
 	github_release_ota_init(&gui);
 
@@ -235,7 +239,7 @@ void app_main(void)
 	ESP_ERROR_CHECK(xTaskCreate(button_emulator_event_loop, "button_emulator_event_loop", 4096, NULL, 10, NULL) != pdPASS);
 
 	// Initialize audio capture
-//	microphone_init(httpd);
+	microphone_init();
 
 	bool slot = false;
 	int render_ret = -1;

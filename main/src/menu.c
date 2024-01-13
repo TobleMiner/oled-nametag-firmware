@@ -97,8 +97,13 @@ static bool on_button_event(const button_event_t *event, void *priv) {
 		menu_entry_submenu_t *parent_of_parent = parent->base.parent;
 
 		if (!parent_of_parent) {
-			// TODO: support exit from menu root level
-			ESP_LOGI(TAG, "Trying to exit from menu root");
+			if (menu->cbs && menu->cbs->on_menu_exit) {
+				menu_hide(menu);
+				menu->cbs->on_menu_exit(menu->cb_ctx);
+				return true;
+			} else {
+				ESP_LOGI(TAG, "Trying to exit from menu without menu_exit cb set, ignoring");
+			}
 			return false;
 		}
 		gui_element_set_hidden(&parent->gui_list->container.element, true);
