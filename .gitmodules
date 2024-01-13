@@ -16,3 +16,6 @@
 [submodule "components/esp-idf-freetype-component"]
 	path = components/esp-idf-freetype-component
 	url = https://github.com/TobleMiner/esp-idf-freetype-component.git
+[submodule "components/esp-dsp"]
+	path = components/esp-dsp
+	url = https://github.com/espressif/esp-dsp
